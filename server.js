@@ -2,7 +2,7 @@ const express = require('express');
 const { checkAddresses } = require('./src/api/checkAddresses');
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 // Middleware to parse JSON request bodies
 app.use(express.json());

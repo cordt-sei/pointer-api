@@ -1,9 +1,9 @@
 const { determineAssetProperties } = require('../utils/determineType');
 
 async function checkAddresses(req, res) {
-    const { address, assets } = req.body;
+    const { address, addresses } = req.body;  // Change from 'assets' to 'addresses'
 
-    if (!address && !assets) {
+    if (!address && !addresses) {
         return res.status(400).json({ error: 'An address or an array of addresses is required' });
     }
 
@@ -14,8 +14,8 @@ async function checkAddresses(req, res) {
     }
 
     // Handle array of addresses case
-    if (Array.isArray(assets)) {
-        const results = await Promise.all(assets.map(async (addr) => {
+    if (Array.isArray(addresses)) {  // Change from 'assets' to 'addresses'
+        const results = await Promise.all(addresses.map(async (addr) => {
             const result = await determineAssetProperties(addr);
             return { address: addr, ...result };
         }));
