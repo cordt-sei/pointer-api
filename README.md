@@ -103,11 +103,6 @@ The request body can be either:
 - **End Users**: Use the API to verify addresses, understand their properties for security purposes, or make informed trading decisions.
 - **Batch Processing**: Send a JSON array to check multiple addresses in one go, reducing manual effort and increasing efficiency.
 
-## Performance Improvements
-
-- **Concurrent API Calls**: The API leverages `Promise.all` for concurrent processing of multiple addresses, significantly reducing the overall response time.
-- **Efficient Error Handling**: Ensures that errors are handled gracefully without interrupting the processing of remaining addresses.
-
 ## Contributions
 
 Contributions are welcome! Feel free to open issues or submit pull requests to enhance the functionality or usability of this project.
