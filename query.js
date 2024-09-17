@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const SEIREST = 'https://sei-api.polkachu.com'; // Replace with your actual Sei REST API endpoint
+const SEIREST = 'https://rest.sei-apis.com';
 
 // Function to determine the type of address
 function determineAddressType(address) {

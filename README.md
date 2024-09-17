@@ -24,7 +24,7 @@ This API simplifies the following processes:
 
 ## API Endpoints
 
-### `POST /check-address`
+### `POST /`
 
 #### Description
 
@@ -45,7 +45,7 @@ The request body can be either:
 #### Example Request
 
 ```bash
-curl -X POST https://pointer.basementnodes.ca/check-address \
+curl -X POST https://pointer.basementnodes.ca/ \
   -H "Content-Type: application/json" \
   -d '{"address": "0x809FF4801aA5bDb33045d1fEC810D082490D63a4"}'
 ```
@@ -53,7 +53,7 @@ curl -X POST https://pointer.basementnodes.ca/check-address \
 Or for multiple addresses:
 
 ```bash
-curl -X POST https://pointer.basementnodes.ca/check-address \
+curl -X POST https://pointer.basementnodes.ca/ \
   -H "Content-Type: application/json" \
   -d '{"addresses": ["sei1eavtmc4y00a0ed8l9c7l0m7leesv3yetcptklv2kalz4tsgz02mqlvyea6", "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0"]}'
 ```

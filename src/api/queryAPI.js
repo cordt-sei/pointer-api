@@ -1,6 +1,7 @@
 const axios = require('axios');
-const SEIREST = 'https://sei-api.polkachu.com';
+const SEIREST = 'https://rest.sei-apis.com';
 
+// Function to perform REST API calls
 async function queryAPI(endpoint, params) {
     try {
         const response = await axios.get(`${SEIREST}${endpoint}`, { params });
