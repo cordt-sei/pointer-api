@@ -4,12 +4,16 @@
   "description": "A simple API and web app for checking address properties on the Sei Network.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "jest"
   },
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.7",
     "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
