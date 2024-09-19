@@ -1,4 +1,4 @@
-# Sei Network Address Checker
+# Sei Asset<>Pointer Metadata
 
 Provides a simplified, unified API for checking pointer and pointee relationships of addresses on the Sei Network. This API accepts any valid asset denom or contract address as input and returns all relevant details without requiring users to specify whether the address is a "pointer" or "pointee" or the type.
 
