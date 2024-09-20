@@ -18,6 +18,7 @@ async function determineAssetProperties(address) {
     let isPointer = false;
     let pointerAddress = '';
     let pointeeAddress = '';
+    let pointerType = '';
 
     try {
         if (addressType === 'CW') {
@@ -32,15 +33,19 @@ async function determineAssetProperties(address) {
             if (erc20PointerResult && erc20PointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = erc20PointerResult.pointee;
+                pointerType = 'ERC20';  // Set pointerType to ERC20
             } else if (erc721PointerResult && erc721PointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = erc721PointerResult.pointee;
+                pointerType = 'ERC721';  // Set pointerType to ERC721
             } else if (cw20BaseResult && cw20BaseResult.exists) {
                 isBaseAsset = true;
                 pointerAddress = cw20BaseResult.pointer;
+                pointerType = 'CW20';  // Set pointerType to CW20
             } else if (cw721BaseResult && cw721BaseResult.exists) {
                 isBaseAsset = true;
                 pointerAddress = cw721BaseResult.pointer;
+                pointerType = 'CW721';  // Set pointerType to CW721
             } else {
                 isBaseAsset = true; // It's a natural CW20/CW721 asset if no pointers are found
             }
@@ -58,18 +63,23 @@ async function determineAssetProperties(address) {
             if (cw20PointerResult && cw20PointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = cw20PointerResult.pointee;
+                pointerType = 'CW20';  // Set pointerType to CW20
             } else if (cw721PointerResult && cw721PointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = cw721PointerResult.pointee;
+                pointerType = 'CW721';  // Set pointerType to CW721
             } else if (nativePointerResult && nativePointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = nativePointerResult.pointee;
+                // No need to set pointerType for native assets, as it's obvious
             } else if (erc20BaseResult && erc20BaseResult.exists) {
                 isBaseAsset = true;
                 pointerAddress = erc20BaseResult.pointer;
+                pointerType = 'ERC20';  // Set pointerType to ERC20
             } else if (erc721BaseResult && erc721BaseResult.exists) {
                 isBaseAsset = true;
                 pointerAddress = erc721BaseResult.pointer;
+                pointerType = 'ERC721';  // Set pointerType to ERC721
             } else {
                 isBaseAsset = true; // It's a natural ERC20/ERC721 asset
             }
@@ -95,6 +105,7 @@ async function determineAssetProperties(address) {
             address,
             isBaseAsset,
             isPointer,
+            pointerType: pointerType || undefined,  // Only include pointerType if it's set
             pointerAddress,
             pointeeAddress
         };
