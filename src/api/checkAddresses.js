@@ -1,7 +1,12 @@
 const { determineAssetProperties } = require('../utils/determineProps');
 
 async function checkAddresses(req, res) {
-    const { address, addresses } = req.body;
+    // Check both query params and body for address or addresses
+    const address = req.query.address || req.body.address;
+    const addresses = req.query.addresses || req.body.addresses;
+
+    console.log('Parsed address:', address);
+    console.log('Parsed addresses:', addresses);
 
     if (!address && !addresses) {
         return res.status(400).json({ error: 'An address or an array of addresses is required' });
@@ -21,7 +26,6 @@ async function checkAddresses(req, res) {
     // Array of assets
     if (Array.isArray(addresses)) {
         try {
-            // Use Promise.all to make concurrent API calls
             const results = await Promise.all(
                 addresses.map(async (addr) => {
                     const result = await determineAssetProperties(addr);
