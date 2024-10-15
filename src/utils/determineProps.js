@@ -1,4 +1,4 @@
-const { queryAPI } = require('../api/queryAPI');
+const { queryAPI } = require('./queryAPI'); // Adjust the path accordingly
 
 function determineAddressType(address) {
     if (address.startsWith('0x') && address.length === 42) {
@@ -71,7 +71,6 @@ async function determineAssetProperties(address) {
             } else if (nativePointerResult && nativePointerResult.exists) {
                 isPointer = true;
                 pointeeAddress = nativePointerResult.pointee;
-                // No need to set pointerType for native assets, as it's obvious
             } else if (erc20BaseResult && erc20BaseResult.exists) {
                 isBaseAsset = true;
                 pointerAddress = erc20BaseResult.pointer;
@@ -85,7 +84,6 @@ async function determineAssetProperties(address) {
             }
 
         } else if (addressType === 'NATIVE') {
-            // Make concurrent API call for NATIVE type
             const nativePointerCheck = await queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 2, pointee: address });
 
             if (nativePointerCheck && nativePointerCheck.exists) {
@@ -116,4 +114,4 @@ async function determineAssetProperties(address) {
     }
 }
 
-module.exports = { determineAssetProperties, determineAddressType };
+module.exports = { determineAssetProperties };

@@ -1,8 +1,8 @@
 const express = require('express');
-const { checkAddresses } = require('./src/api/checkAddresses'); // Ensure the path is correct
+const { determineAssetProperties } = require('./utils/determineProps');
 
 const app = express();
-const PORT = 3003;
+const PORT = 3003; // Ensure the port is correct
 
 // Middleware to log incoming requests
 app.use(express.json());
