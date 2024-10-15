@@ -1,24 +1,36 @@
 const express = require('express');
-const { checkAddresses } = require('./src/api/checkAddresses');
+const { checkAddresses } = require('./src/api/checkAddresses'); // Ensure the path is correct
 
 const app = express();
-const PORT = 3003;  // Changed to port 3003
+const PORT = 3003;
 
-// parse JSON request bodies
+// Middleware to log incoming requests
 app.use(express.json());
-
-// log incoming requests
 app.use((req, res, next) => {
     console.log(`Received request: ${req.method} ${req.url}`);
-    console.log('Query params:', req.query);
-    console.log('Request body:', req.body);
     next();
 });
 
-// Handle requests with both query params and request body
-app.post('/', checkAddresses);
+// GET request handler for querying by token address
+app.get('/:address', async (req, res) => {
+    try {
+        const { address } = req.params;
+        if (!address) {
+            return res.status(400).json({ error: 'Address is required' });
+        }
 
-// Listen on the specified port
+        // Call the function to determine asset properties for the address
+        const result = await determineAssetProperties(address);
+
+        // Respond with the result in JSON format
+        return res.json(result);
+    } catch (error) {
+        console.error('Error processing address:', error.message);
+        return res.status(500).json({ error: 'Failed to process the address' });
+    }
+});
+
+// Start listening on the specified port
 app.listen(PORT, () => {
     console.log(`API server running at http://localhost:${PORT}`);
 });
