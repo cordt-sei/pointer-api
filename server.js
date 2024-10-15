@@ -12,9 +12,11 @@ app.use((req, res, next) => {
 });
 
 // GET request handler for querying by token address
-app.get('/:address', async (req, res) => {
+app.get('/:address?', async (req, res) => {
     try {
-        const { address } = req.params;
+        // Support both URL path and query parameter for address
+        const address = req.params.address || req.query.address;
+        
         if (!address) {
             return res.status(400).json({ error: 'Address is required' });
         }
