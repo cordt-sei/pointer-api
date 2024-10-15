@@ -1,4 +1,4 @@
-const { queryAPI } = require('.,/api/queryAPI');
+const { queryAPI } = require('../api/queryAPI');
 
 function determineAddressType(address) {
     if (address.startsWith('0x') && address.length === 42) {
