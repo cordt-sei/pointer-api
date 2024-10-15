@@ -1,5 +1,5 @@
 const express = require('express');
-const { determineAssetProperties } = require('./utils/determineProps');
+const { determineAssetProperties } = require('./src/utils/determineProps');
 
 const app = express();
 const PORT = 3003; // Ensure the port is correct
