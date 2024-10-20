@@ -1,4 +1,4 @@
-const { determineAssetProperties } = require('../src/utils/determineType'); // Corrected path
+const { determineAssetProperties } = require('../src/utils/determineProps'); // Corrected path
 const { queryAPI } = require('../src/api/queryAPI');
 
 // Mock the queryAPI function

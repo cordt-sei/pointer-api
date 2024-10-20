@@ -1,4 +1,4 @@
-const { determineAssetProperties } = require('../src/utils/determineType');
+const { determineAssetProperties } = require('../src/utils/determineProps');
 
 // Define known constants
 const testCases = [

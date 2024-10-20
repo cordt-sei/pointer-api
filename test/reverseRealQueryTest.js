@@ -1,4 +1,4 @@
-const { determineAssetProperties } = require('../src/utils/determineType'); // Import your function
+const { determineAssetProperties } = require('../src/utils/determineProps'); // Import your function
 
 // Define reverse test cases
 const reverseTestCases = [
