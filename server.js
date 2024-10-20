@@ -2,37 +2,38 @@ const express = require('express');
 const { determineAssetProperties } = require('./src/utils/determineProps');
 
 const app = express();
-const PORT = 3003; // Ensure the port is correct
+const PORT = 3003;
 
-// Middleware to log incoming requests
+// Middleware to parse JSON request bodies
 app.use(express.json());
-app.use((req, res, next) => {
-    console.log(`Received request: ${req.method} ${req.url}`);
-    next();
-});
 
-// GET request handler for querying by token address
-app.get('/:address?', async (req, res) => {
+// Route to handle POST requests to the root
+app.post('/', async (req, res) => {
     try {
-        // Support both URL path and query parameter for address
-        const address = req.params.address || req.query.address;
-        
-        if (!address) {
-            return res.status(400).json({ error: 'Address is required' });
+        const { address, addresses } = req.body;
+        let addressList = [];
+
+        // Check if a single address or a list of addresses is provided
+        if (address) {
+            addressList = [address];
+        } else if (Array.isArray(addresses)) {
+            addressList = addresses;
+        } else {
+            return res.status(400).json({ error: 'Either "address" or "addresses" is required in the request body.' });
         }
 
-        // Call the function to determine asset properties for the address
-        const result = await determineAssetProperties(address);
+        // Process each address and determine asset properties
+        const results = await Promise.all(addressList.map(determineAssetProperties));
 
-        // Respond with the result in JSON format
-        return res.json(result);
+        // Return the results in JSON format
+        res.json(results);
     } catch (error) {
-        console.error('Error processing address:', error.message);
-        return res.status(500).json({ error: 'Failed to process the address' });
+        console.error('Error processing request:', error.message);
+        res.status(500).json({ error: 'Failed to process the request.' });
     }
 });
 
-// Start listening on the specified port
+// Start the server
 app.listen(PORT, () => {
     console.log(`API server running at http://localhost:${PORT}`);
 });

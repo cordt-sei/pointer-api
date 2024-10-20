@@ -1,5 +1,5 @@
 const axios = require('axios');
-const SEIREST = 'https://rest.sei-apis.com';
+const SEIREST = 'http://tasty.seipex.fi:1317';
 
 // Function to perform REST API calls
 async function queryAPI(endpoint, params) {
