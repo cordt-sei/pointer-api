@@ -59,9 +59,9 @@ The request body can be either:
 
 - **Multiple Addresses Request**:
   ```bash
-  curl -X POST https://pointer.basementnodes.ca/ \
-  -H "Content-Type: application/json" \
-  -d '{"addresses": ["sei1eavtmc4y00a0ed8l9c7l0m7leesv3yetcptklv2kalz4tsgz02mqlvyea6", "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0"]}'
+   curl -X POST https://pointer.basementnodes.ca/ \
+   -H "Content-Type: application/json" \
+   -d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl",   "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0", "sei1hrndqntlvtmx2kepr0zsfgr7nzjptcc72cr4ppk4yav58vvy7v3s4er8ed", "0x5f0E07dFeE5832Faa00c63F2D33A0D79150E8598", "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518", "factory/sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc/isei"]}'
   ```
 
 #### Example Response
@@ -79,22 +79,61 @@ The request body can be either:
 
 - **For Multiple Addresses**:
   ```json
-  [
-    {
-      "address": "0x809FF4801aA5bDb33045d1fEC810D082490D63a4",
-      "isBaseAsset": true,
-      "isPointer": false,
-      "pointerAddress": "",
-      "pointeeAddress": ""
-    },
-    {
-      "address": "sei1eavtmc4y00a0ed8l9c7l0m7leesv3yetcptklv2kalz4tsgz02mqlvyea6",
-      "isBaseAsset": true,
-      "isPointer": false,
-      "pointerAddress": "",
-      "pointeeAddress": ""
-    }
-  ]
+   [
+     {
+       "address": "0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae",
+       "isBaseAsset": true,
+       "isPointer": false,
+       "pointerType": "ERC20",
+       "pointerAddress": "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl",
+       "pointeeAddress": ""
+     },
+     {
+       "address": "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl",
+       "isBaseAsset": false,
+       "isPointer": true,
+       "pointerType": "ERC20",
+       "pointerAddress": "",
+       "pointeeAddress": "0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae"
+     },
+     {
+       "address": "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0",
+       "isBaseAsset": true,
+       "isPointer": false,
+       "pointerAddress": "0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1",
+       "pointeeAddress": ""
+     },
+     {
+       "address": "sei1hrndqntlvtmx2kepr0zsfgr7nzjptcc72cr4ppk4yav58vvy7v3s4er8ed",
+       "isBaseAsset": true,
+       "isPointer": false,
+       "pointerType": "CW20",
+       "pointerAddress": "0x5f0E07dFeE5832Faa00c63F2D33A0D79150E8598",
+       "pointeeAddress": ""
+     },
+     {
+       "address": "0x5f0E07dFeE5832Faa00c63F2D33A0D79150E8598",
+       "isBaseAsset": false,
+       "isPointer": true,
+       "pointerType": "CW20",
+       "pointerAddress": "",
+       "pointeeAddress": "sei1hrndqntlvtmx2kepr0zsfgr7nzjptcc72cr4ppk4yav58vvy7v3s4er8ed"
+     },
+     {
+       "address": "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518",
+       "isBaseAsset": true,
+       "isPointer": false,
+       "pointerAddress": "0xBdE3bD155613752065C52059f8B2F72f506C4374",
+       "pointeeAddress": ""
+     },
+     {
+       "address": "factory/sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc/isei",
+       "isBaseAsset": true,
+       "isPointer": false,
+       "pointerAddress": "0x5Cf6826140C1C56Ff49C808A1A75407Cd1DF9423",
+       "pointeeAddress": ""
+     }
+   ]
   ```
 
 ## Example Use Cases
