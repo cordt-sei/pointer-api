@@ -136,12 +136,6 @@ The request body can be either:
    ]
   ```
 
-## Example Use Cases
-
-- **Developers**: Integrate the API into blockchain tools, explorers, or dApps to provide seamless address checks and enhance user experience.
-- **End Users**: Use the API to verify addresses, understand their properties for security purposes, or make informed trading decisions.
-- **Batch Processing**: Send a JSON array to check multiple addresses in one go, reducing manual effort and increasing efficiency.
-
 ## Contributions
 
 Contributions are welcome! Feel free to open issues or submit pull requests to enhance the functionality or usability of this project.
