@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const SEIREST = 'http://tasty.seipex.fi:1317';
+const SEIREST = 'https://api.sei.basementnodes.ca';
 
 // Function to determine the type of address
 function determineAddressType(address) {
