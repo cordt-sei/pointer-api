@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const SEIREST = 'https://api.sei.basementnodes.ca';
+const SEIREST = 'http://localhost:1317';
 
 // Function to determine the type of address
 function determineAddressType(address) {
