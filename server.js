@@ -10,16 +10,22 @@ app.use(express.json());
 // Route to handle GET requests with an address parameter
 app.get('/:address', async (req, res) => {
     try {
-        const { address } = req.params;
+        let { address } = req.params;
         if (!address) {
             return res.status(400).json({ error: 'Address parameter is required.' });
         }
+        
+        // Decode URL-encoded characters (e.g., %2F → /)
+        address = decodeURIComponent(address);
 
         // Process the address and determine asset properties
         const result = await determineAssetProperties(address);
 
-        // Return the result in JSON format
-        res.json(result);
+        // Return the result in JSON format, but ensure the correct format
+        res.json({
+            address,
+            ...result
+        });
     } catch (error) {
         console.error('Error processing request:', error.message);
         res.status(500).json({ error: 'Failed to process the request.' });
