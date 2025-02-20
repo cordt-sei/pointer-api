@@ -14,45 +14,46 @@ function determineAddressType(address) {
 
 async function determineAssetProperties(address) {
     const addressType = determineAddressType(address);
-    let isBaseAsset = false;
+    let isBaseAsset = true;  // default: assume it's a natural asset
     let isPointer = false;
     let pointerAddress = '';
     let pointeeAddress = '';
-    let pointerType = '';
+    let pointerType = addressType; // default pointerType is the address type
 
     try {
         if (addressType === 'CW') {
-            // Make concurrent API calls for CW type
-            const [erc20PointerResult, erc721PointerResult, cw20BaseResult, cw721BaseResult] = await Promise.all([
+            // For CW addresses, run concurrent queries for pointer and base assets
+            const [erc20Pointer, erc721Pointer, cw20Base, cw721Base] = await Promise.all([
                 queryAPI('/sei-protocol/seichain/evm/pointee', { pointerType: 0, pointer: address }),
                 queryAPI('/sei-protocol/seichain/evm/pointee', { pointerType: 1, pointer: address }),
                 queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 3, pointee: address }),
                 queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 4, pointee: address })
             ]);
 
-            if (erc20PointerResult && erc20PointerResult.exists) {
+            if (erc20Pointer && erc20Pointer.exists) {
                 isPointer = true;
-                pointeeAddress = erc20PointerResult.pointee;
-                pointerType = 'ERC20';  // Set pointerType to ERC20
-            } else if (erc721PointerResult && erc721PointerResult.exists) {
+                pointeeAddress = erc20Pointer.pointee;
+                pointerType = 'ERC20';
+            } else if (erc721Pointer && erc721Pointer.exists) {
                 isPointer = true;
-                pointeeAddress = erc721PointerResult.pointee;
-                pointerType = 'ERC721';  // Set pointerType to ERC721
-            } else if (cw20BaseResult && cw20BaseResult.exists) {
+                pointeeAddress = erc721Pointer.pointee;
+                pointerType = 'ERC721';
+            } else if (cw20Base && cw20Base.exists) {
                 isBaseAsset = true;
-                pointerAddress = cw20BaseResult.pointer;
-                pointerType = 'CW20';  // Set pointerType to CW20
-            } else if (cw721BaseResult && cw721BaseResult.exists) {
+                pointerAddress = cw20Base.pointer;
+                pointerType = 'CW20';
+            } else if (cw721Base && cw721Base.exists) {
                 isBaseAsset = true;
-                pointerAddress = cw721BaseResult.pointer;
-                pointerType = 'CW721';  // Set pointerType to CW721
+                pointerAddress = cw721Base.pointer;
+                pointerType = 'CW721';
             } else {
-                isBaseAsset = true; // It's a natural CW20/CW721 asset if no pointers are found
+                // If no pointer info is found, treat it as a natural CW asset.
+                pointerType = 'CW';
             }
 
         } else if (addressType === 'MIXED') {
-            // Make concurrent API calls for MIXED type
-            const [cw20PointerResult, cw721PointerResult, nativePointerResult, erc20BaseResult, erc721BaseResult] = await Promise.all([
+            // For MIXED addresses, try CW pointer queries, native pointer query, then ERC base queries.
+            const [cw20Pointer, cw721Pointer, nativePointer, erc20Base, erc721Base] = await Promise.all([
                 queryAPI('/sei-protocol/seichain/evm/pointee', { pointerType: 3, pointer: address }),
                 queryAPI('/sei-protocol/seichain/evm/pointee', { pointerType: 4, pointer: address }),
                 queryAPI('/sei-protocol/seichain/evm/pointee', { pointerType: 2, pointer: address }),
@@ -60,41 +61,49 @@ async function determineAssetProperties(address) {
                 queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 1, pointee: address })
             ]);
 
-            if (cw20PointerResult && cw20PointerResult.exists) {
+            if (cw20Pointer && cw20Pointer.exists) {
                 isPointer = true;
-                pointeeAddress = cw20PointerResult.pointee;
-                pointerType = 'CW20';  // Set pointerType to CW20
-            } else if (cw721PointerResult && cw721PointerResult.exists) {
+                pointeeAddress = cw20Pointer.pointee;
+                pointerType = 'CW20';
+            } else if (cw721Pointer && cw721Pointer.exists) {
                 isPointer = true;
-                pointeeAddress = cw721PointerResult.pointee;
-                pointerType = 'CW721';  // Set pointerType to CW721
-            } else if (nativePointerResult && nativePointerResult.exists) {
+                pointeeAddress = cw721Pointer.pointee;
+                pointerType = 'CW721';
+            } else if (nativePointer && nativePointer.exists) {
                 isPointer = true;
-                pointeeAddress = nativePointerResult.pointee;
-            } else if (erc20BaseResult && erc20BaseResult.exists) {
+                pointeeAddress = nativePointer.pointee;
+                pointerType = 'NATIVE';
+            } else if (erc20Base && erc20Base.exists) {
                 isBaseAsset = true;
-                pointerAddress = erc20BaseResult.pointer;
-                pointerType = 'ERC20';  // Set pointerType to ERC20
-            } else if (erc721BaseResult && erc721BaseResult.exists) {
+                pointerAddress = erc20Base.pointer;
+                pointerType = 'ERC20';
+            } else if (erc721Base && erc721Base.exists) {
                 isBaseAsset = true;
-                pointerAddress = erc721BaseResult.pointer;
-                pointerType = 'ERC721';  // Set pointerType to ERC721
+                pointerAddress = erc721Base.pointer;
+                pointerType = 'ERC721';
             } else {
-                isBaseAsset = true; // It's a natural ERC20/ERC721 asset
+                pointerType = 'MIXED';
             }
 
         } else if (addressType === 'NATIVE') {
-            const nativePointerCheck = await queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 2, pointee: address });
-
-            if (nativePointerCheck && nativePointerCheck.exists) {
-                isBaseAsset = true;
-                pointerAddress = nativePointerCheck.pointer;
+            // For NATIVE addresses, check the pointer endpoint.
+            const nativeResult = await queryAPI('/sei-protocol/seichain/evm/pointer', { pointerType: 2, pointee: address });
+            if (nativeResult && nativeResult.exists) {
+                isPointer = true;
+                pointerAddress = nativeResult.pointer;
+                pointerType = 'NATIVE';
             } else {
-                isBaseAsset = true; // It remains a native base asset
+                // If not found as a pointer, it remains a natural asset.
+                isBaseAsset = true;
+                pointerType = 'NATIVE';
             }
+        } else {
+            // For UNKNOWN type, default to base asset.
+            isBaseAsset = true;
+            pointerType = 'UNKNOWN';
         }
 
-        // Default to base asset if no matches are found
+        // Final fallback: if nothing was detected as pointer, assume base asset.
         if (!isPointer && !isBaseAsset) {
             isBaseAsset = true;
         }
@@ -103,7 +112,7 @@ async function determineAssetProperties(address) {
             address,
             isBaseAsset,
             isPointer,
-            pointerType: pointerType || undefined,  // Only include pointerType if it's set
+            pointerType: pointerType || undefined,
             pointerAddress,
             pointeeAddress
         };

@@ -1,38 +1,43 @@
 const express = require('express');
 const { determineAssetProperties } = require('./src/utils/determineProps');
+const { setSEIREST } = require('./src/api/queryAPI');
 
 const app = express();
 const PORT = 3003;
 
-// Middleware to parse JSON request bodies
+// ✅ Define and pass SEIREST explicitly
+const SEIREST = 'https://api.sei.basementnodes.ca';
+setSEIREST(SEIREST);
+
 app.use(express.json());
 
 // Route to handle GET requests with an address parameter
 app.get('/:address', async (req, res) => {
     try {
         let { address } = req.params;
+        console.log("🔥 Received GET request for address:", address);
+
         if (!address) {
             return res.status(400).json({ error: 'Address parameter is required.' });
         }
-        
+
         // Decode URL-encoded characters (e.g., %2F → /)
         address = decodeURIComponent(address);
+        console.log("🔍 Decoded address:", address);
 
         // Process the address and determine asset properties
         const result = await determineAssetProperties(address);
 
-        // Return the result in JSON format, but ensure the correct format
-        res.json({
-            address,
-            ...result
-        });
+        console.log("✅ Processed address result:", result);
+
+        res.json(result);
     } catch (error) {
-        console.error('Error processing request:', error.message);
+        console.error('❌ Error processing GET request:', error.message);
         res.status(500).json({ error: 'Failed to process the request.' });
     }
 });
 
-// Route to handle POST requests to the root
+// Route to handle POST requests for multiple addresses
 app.post('/', async (req, res) => {
     try {
         const { address, addresses } = req.body;
@@ -47,18 +52,22 @@ app.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Either "address" or "addresses" is required in the request body.' });
         }
 
+        console.log("🔥 Received POST request for addresses:", addressList);
+
         // Process each address and determine asset properties
         const results = await Promise.all(addressList.map(determineAssetProperties));
+
+        console.log("✅ Processed POST request result:", results);
 
         // Return the results in JSON format
         res.json(results);
     } catch (error) {
-        console.error('Error processing request:', error.message);
+        console.error('❌ Error processing POST request:', error.message);
         res.status(500).json({ error: 'Failed to process the request.' });
     }
 });
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`API server running at http://localhost:${PORT}`);
+    console.log(`🚀 API server running at http://localhost:${PORT}`);
 });
