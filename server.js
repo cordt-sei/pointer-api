@@ -1,21 +1,19 @@
 const express = require('express');
 const { determineAssetProperties } = require('./src/utils/determineProps');
-const { setSEIREST } = require('./src/api/queryAPI');
+const { queryAPI } = require('./src/api/queryAPI'); // ✅ Correct import
 
 const app = express();
 const PORT = 3003;
 
-// ✅ Define and pass SEIREST explicitly
-const SEIREST = 'https://api.sei.basementnodes.ca';
-setSEIREST(SEIREST);
-
+// Enable debugging logs if set to `true`
+const DEBUG = false;
 app.use(express.json());
 
 // Route to handle GET requests with an address parameter
 app.get('/:address', async (req, res) => {
     try {
         let { address } = req.params;
-        console.log("🔥 Received GET request for address:", address);
+        if (DEBUG) console.log("🔥 Received GET request for address:", address);
 
         if (!address) {
             return res.status(400).json({ error: 'Address parameter is required.' });
@@ -23,12 +21,12 @@ app.get('/:address', async (req, res) => {
 
         // Decode URL-encoded characters (e.g., %2F → /)
         address = decodeURIComponent(address);
-        console.log("🔍 Decoded address:", address);
+        if (DEBUG) console.log("🔍 Decoded address:", address);
 
         // Process the address and determine asset properties
         const result = await determineAssetProperties(address);
 
-        console.log("✅ Processed address result:", result);
+        if (DEBUG) console.log("✅ Processed address result:", result);
 
         res.json(result);
     } catch (error) {
@@ -52,14 +50,13 @@ app.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Either "address" or "addresses" is required in the request body.' });
         }
 
-        console.log("🔥 Received POST request for addresses:", addressList);
+        if (DEBUG) console.log("🔥 Received POST request for addresses:", addressList);
 
         // Process each address and determine asset properties
         const results = await Promise.all(addressList.map(determineAssetProperties));
 
-        console.log("✅ Processed POST request result:", results);
+        if (DEBUG) console.log("✅ Processed POST request result:", results);
 
-        // Return the results in JSON format
         res.json(results);
     } catch (error) {
         console.error('❌ Error processing POST request:', error.message);
