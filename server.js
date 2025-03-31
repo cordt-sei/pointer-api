@@ -1,6 +1,6 @@
 const express = require('express');
 const { determineAssetProperties } = require('./src/utils/determineProps');
-const { queryAPI } = require('./src/api/queryAPI'); // ✅ Correct import
+const { queryAPI } = require('./src/api/queryAPI');
 
 const app = express();
 const PORT = 3003;
@@ -13,7 +13,7 @@ app.use(express.json());
 app.get('/:address', async (req, res) => {
     try {
         let { address } = req.params;
-        if (DEBUG) console.log("🔥 Received GET request for address:", address);
+        if (DEBUG) console.log("Received GET request for address:", address);
 
         if (!address) {
             return res.status(400).json({ error: 'Address parameter is required.' });
@@ -21,16 +21,16 @@ app.get('/:address', async (req, res) => {
 
         // Decode URL-encoded characters (e.g., %2F → /)
         address = decodeURIComponent(address);
-        if (DEBUG) console.log("🔍 Decoded address:", address);
+        if (DEBUG) console.log("Decoded address:", address);
 
         // Process the address and determine asset properties
         const result = await determineAssetProperties(address);
 
-        if (DEBUG) console.log("✅ Processed address result:", result);
+        if (DEBUG) console.log("Processed address:", result);
 
         res.json(result);
     } catch (error) {
-        console.error('❌ Error processing GET request:', error.message);
+        console.error('Error processing GET request:', error.message);
         res.status(500).json({ error: 'Failed to process the request.' });
     }
 });
@@ -47,7 +47,7 @@ app.post('/', async (req, res) => {
         } else if (Array.isArray(addresses)) {
             addressList = addresses;
         } else {
-            return res.status(400).json({ error: 'Either "address" or "addresses" is required in the request body.' });
+            return res.status(400).json({ error: '"address" or "addresses" required in request body.' });
         }
 
         if (DEBUG) console.log("🔥 Received POST request for addresses:", addressList);
@@ -55,11 +55,11 @@ app.post('/', async (req, res) => {
         // Process each address and determine asset properties
         const results = await Promise.all(addressList.map(determineAssetProperties));
 
-        if (DEBUG) console.log("✅ Processed POST request result:", results);
+        if (DEBUG) console.log("Processed POST request:", results);
 
         res.json(results);
     } catch (error) {
-        console.error('❌ Error processing POST request:', error.message);
+        console.error('Error processing POST request:', error.message);
         res.status(500).json({ error: 'Failed to process the request.' });
     }
 });
