@@ -1,13 +1,18 @@
 const axios = require('axios');
-const SEIREST = 'https://rest.sei-apis.com';
+const SEIREST = process.env.SEIREST || 'https://rest.sei-apis.com';
+const API_KEY = process.env.API_KEY;
 
-// Function to perform REST API calls
 async function queryAPI(endpoint, params) {
     try {
-        const response = await axios.get(`${SEIREST}${endpoint}`, { params });
+        const response = await axios.get(`${SEIREST}${endpoint}`, {
+            params,
+            headers: {
+                'x-api-key': API_KEY
+            }
+        });
         return response.data;
     } catch (error) {
-        console.error('Error querying API:', error.message);
+        console.error('Error querying API:', error.response?.data || error.message);
         return null;
     }
 }
