@@ -1,6 +1,5 @@
 const axios = require('axios');
-const SEIREST = 'localhost:1317';
-
+const SEIREST = 'https://api.sei.basementnodes.ca';
 
 // Function to perform REST API calls
 async function queryAPI(endpoint, params) {
