@@ -1,18 +1,22 @@
 {
   "name": "sei-address-checker",
   "version": "1.5.0",
-  "description": "A simple API and web app for asset properties on the Sei Network.",
+  "description": "A simple API for checking asset properties on the Sei Network.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/test-api.js",
+    "test:api-key": "node tests/test-api-key.js"
   },
   "author": "Cordt Hanson",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.7",
+    "dotenv": "^16.4.7",
     "express": "^4.21.0"
   },
   "devDependencies": {
+    "axios-mock-adapter": "^2.1.0",
     "jest": "^29.7.0"
   }
 }

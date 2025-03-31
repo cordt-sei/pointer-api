@@ -8,11 +8,20 @@ async function queryAPI(endpoint, params) {
             params,
             headers: {
                 'x-api-key': API_KEY
-            }
+            },
+            timeout: 5000 // 5 second timeout to prevent hanging
         });
         return response.data;
     } catch (error) {
-        console.error('Error querying API:', error.response?.data || error.message);
+        // Log error details but keep same return format
+        if (error.response) {
+            console.error('Error querying API:', error.response?.data || error.message);
+            if (error.response.status === 429) {
+                console.error('API Rate Limit Exceeded');
+            }
+        } else {
+            console.error('Error querying API:', error.message);
+        }
         return null;
     }
 }
