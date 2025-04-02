@@ -1,7 +1,0 @@
-localhost
-
-route {
-    root * /path/to/your/webapp
-    file_server
-    reverse_proxy /check-address http://localhost:3000
-}
