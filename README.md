@@ -5,7 +5,7 @@ A unified API for checking pointer and pointee relationships of addresses on the
 ## Features
 
 - Identifies asset types (EVM, CW, NATIVE)
-- Checks whether an address / denom is a base asset or pointer
+- Checks whether an address/denom is a base asset or pointer
 - Retrieves associated pointer or pointee addresses
 - Supports multiple inputs for batch processing
 - Concurrent processing for large batches
@@ -22,26 +22,26 @@ A unified API for checking pointer and pointee relationships of addresses on the
 
 - Clone the repository:
 
-```bash
-git clone https://github.com/yourusername/sei-address-checker.git
-cd sei-address-checker
-```
+  ```bash
+  git clone https://github.com/yourusername/sei-address-checker.git
+  cd sei-address-checker
+  ```
 
 - Install dependencies:
 
-```bash
-yarn install
-```
+  ```bash
+  yarn install
+  ```
 
 - Configure environment in `.env`:
 
-```env
-SEIREST=https://rest.sei-apis.com
-API_KEY=your_api_key_here
-PORT=3003
-LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARN, ERROR
-LOG_FILE=/var/log/pointer-api.log
-```
+  ```env
+  SEIREST=https://rest.sei-apis.com
+  API_KEY=your_api_key_here
+  PORT=3003
+  LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARN, ERROR
+  LOG_FILE=/var/log/pointer-api.log
+  ```
 
 ## Running the API
 
@@ -81,7 +81,7 @@ The API handles three distinct asset types:
 
 Checks a single address and returns its properties. Handles URL encoding for addresses with special characters.
 
-Example requests:
+**Example requests:**
 
 ```bash
 # Simple address
@@ -94,7 +94,9 @@ curl -X GET https://pointer.basementnodes.ca/ibc%2FCA6FBFAF399474A06263E10D0CE5A
 curl -X GET https://pointer.basementnodes.ca/factory%2Fsei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc%2Fisei
 ```
 
-Response:
+**Note:** The GET endpoint can be accessed directly via a web browser. Enter a valid URL in the browser's address bar, the API will handle URL-encoded characters and return the expected JSON response.
+
+**Response:**
 
 ```json
 {
@@ -109,9 +111,9 @@ Response:
 
 ### POST `/`
 
-Checks multiple addresses. Request body can contain a single address or array of addresses.
+Checks multiple addresses. The request body can contain a single address or an array of addresses.
 
-Examples:
+**Examples:**
 
 ```bash
 # Single address
@@ -148,7 +150,7 @@ The API includes a structured logging system with configurable levels:
 - `WARN`: Warnings and potential issues
 - `ERROR`: Error conditions with stack traces
 
-All logs are in JSON format and can be written to a file specified by `LOG_FILE` env variable.
+All logs are in JSON format and can be written to a file specified by the `LOG_FILE` environment variable.
 
 ## Testing
 
