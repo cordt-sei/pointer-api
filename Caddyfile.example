@@ -1,0 +1,99 @@
+pointer.example.com {
+    # TLS configuration
+    tls {
+        # Use Let's Encrypt for certificates
+        # Uncomment this line if you need custom certificates
+        # load /etc/ssl/certs/pointer-api.crt /etc/ssl/private/pointer-api.key
+    }
+
+    # Match requests that have "ibc/" followed by a single segment
+    @ibcInvalidURL path_regexp ibcPath ^/ibc/([^/]+)$
+    rewrite @ibcInvalidURL /ibc%2F{re.ibcPath.1}
+
+    # Match requests that have "factory/" followed by two segments
+    @factoryInvalidURL path_regexp factoryPath ^/factory/([^/]+)/([^/]+)$
+    rewrite @factoryInvalidURL /factory%2F{re.factoryPath.1}%2F{re.factoryPath.2}
+
+    # Reverse proxy all requests to the backend API
+    reverse_proxy localhost:3003 {
+        # Forward necessary headers
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Security headers for all responses
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "no-referrer-when-downgrade"
+        Permissions-Policy "geolocation=(), camera=(), microphone=(), interest-cohort=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; connect-src 'self'"
+    }
+
+    # Rate limiting
+    @api {
+        path /*
+        not path /metrics
+        not path /status
+    }
+    rate_limit @api 100r/m
+
+    # Enable gzip compression for responses
+    encode gzip zstd
+
+    # Add custom error handling
+    handle_errors {
+        @404 expression {http.error.status_code} == 404
+        handle @404 {
+            respond "404 - Not Found" 404
+        }
+
+        @500 expression {http.error.status_code} == 500
+        handle @500 {
+            respond "500 - Server Error" 500
+        }
+
+        # Default error handler
+        handle {
+            respond "{http.error.status_code} - {http.error.status_text}" {http.error.status_code}
+        }
+    }
+
+    # Logging configuration
+    log {
+        output file /var/log/caddy/pointer-api.log {
+            roll_size 10MB
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+        level info
+    }
+
+    # Add a status endpoint for monitoring
+    handle /status {
+        respond "OK" 200
+    }
+
+    # Block sensitive file access
+    @blockedPaths {
+        path /.env
+        path /node_modules/*
+        path /package.json
+        path /package-lock.json
+        path /yarn.lock
+        path /src/*
+        path /tests/*
+        path /.git/*
+    }
+    respond @blockedPaths 403
+}
+
+# Redirect from www subdomain to apex domain
+www.pointer.example.com {
+    redir https://pointer.example.com{uri} permanent
+}
