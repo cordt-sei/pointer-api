@@ -3,6 +3,10 @@ import { determineAssetProperties } from './src/utils/determineProps.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { setupConsoleCapture, log } from './src/utils/logger.js';
+
+// Setup console capture at the earliest point
+setupConsoleCapture();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,57 +15,20 @@ const app = express();
 const PORT = process.env.PORT || 3003;
 
 // Logging configuration
-const LOG_LEVEL = process.env.LOG_LEVEL || 'INFO'; // DEBUG, INFO, WARN, ERROR
+const LOG_LEVEL = process.env.LOG_LEVEL || 'INFO';
 const LOG_FILE = process.env.LOG_FILE || '/var/log/pointer-api.log';
 
 // Enable debugging logs if log level is DEBUG
 const DEBUG = LOG_LEVEL === 'DEBUG';
 
-// Ensure log directory exists
-const logDir = path.dirname(LOG_FILE);
-if (!fs.existsSync(logDir)) {
-    try {
-        fs.mkdirSync(logDir, { recursive: true });
-    } catch (error) {
-        // Use console.error here since logging system isn't initialized yet
-        console.error(`Failed to create log directory (${logDir}):`, error.message);
-    }
-}
-
-// Create the log function and expose it globally for modules to use
-globalThis.logFunction = function log(level, message, data = null) {
-    const levels = {
-        DEBUG: 0,
-        INFO: 1,
-        WARN: 2,
-        ERROR: 3
-    };
-    
-    // Only log if the current log level is less than or equal to the configured level
-    if (levels[level] >= levels[LOG_LEVEL]) {
-        const timestamp = new Date().toISOString();
-        const logEntry = {
-            timestamp,
-            level,
-            message,
-            data: data || undefined
-        };
-        
-        // Log to console
-        console.log(JSON.stringify(logEntry));
-        
-        // Log to file
-        try {
-            fs.appendFileSync(LOG_FILE, JSON.stringify(logEntry) + '\n');
-        } catch (error) {
-            // Use console.error here since it's an error with the logging system itself
-            console.error(`Failed to write to log file (${LOG_FILE}):`, error.message);
-        }
-    }
-};
-
-// Get a reference to the logging function
-const log = globalThis.logFunction;
+// Application startup log
+log('INFO', 'API server initializing', {
+    port: PORT,
+    logLevel: LOG_LEVEL,
+    logFile: LOG_FILE,
+    nodeVersion: process.version,
+    nodeEnv: process.env.NODE_ENV || 'development'
+});
 
 app.use(express.json());
 
