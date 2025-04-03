@@ -1,3 +1,63 @@
+/**
+ * Centralized logging utility with file rotation
+ */
+import fs from 'fs';
+import path from 'path';
+
+// Configuration with defaults
+const LOG_LEVEL = process.env.LOG_LEVEL || 'INFO';
+const LOG_FILE = process.env.LOG_FILE || '/var/log/pointer-api.log';
+const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_LOG_FILES = 5; // Number of rotated files to keep
+
+// Define the levels object before using it
+const levels = {
+    DEBUG: 0,
+    INFO: 1,
+    WARN: 2,
+    ERROR: 3
+};
+
+// Check and rotate log if needed
+function checkRotation() {
+    try {
+        if (fs.existsSync(LOG_FILE)) {
+            const stats = fs.statSync(LOG_FILE);
+            if (stats.size > MAX_LOG_SIZE) {
+                // Rotate logs
+                for (let i = MAX_LOG_FILES - 1; i > 0; i--) {
+                    const oldFile = `${LOG_FILE}.${i}`;
+                    const newFile = `${LOG_FILE}.${i + 1}`;
+                    if (fs.existsSync(oldFile)) {
+                        if (i === MAX_LOG_FILES - 1) {
+                            // Delete the oldest log
+                            fs.unlinkSync(oldFile);
+                        } else {
+                            fs.renameSync(oldFile, newFile);
+                        }
+                    }
+                }
+                // Rotate current log to .1
+                fs.renameSync(LOG_FILE, `${LOG_FILE}.1`);
+            }
+        }
+    } catch (error) {
+        console.error(`Log rotation error: ${error.message}`);
+    }
+}
+
+// Ensure log directory exists
+try {
+    const logDir = path.dirname(LOG_FILE);
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+    }
+    // Check if rotation is needed
+    checkRotation();
+} catch (error) {
+    console.error(`Failed to setup log directory: ${error.message}`);
+}
+
 // Keep a reference to the original console methods
 const originalConsole = {
     log: console.log,
@@ -61,5 +121,29 @@ export function setupConsoleCapture() {
         log('WARN', message, data);
     };
     
-    // Exception handlers here...
+    // Set up uncaught exception handler to log to file before crashing
+    process.on('uncaughtException', (error) => {
+        log('ERROR', 'UNCAUGHT EXCEPTION', {
+            message: error.message,
+            stack: error.stack
+        });
+        
+        // Give log a chance to write before exiting
+        setTimeout(() => {
+            process.exit(1);
+        }, 1000);
+    });
+    
+    // Log unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+        log('ERROR', 'UNHANDLED PROMISE REJECTION', {
+            reason: reason.toString(),
+            stack: reason.stack
+        });
+    });
+}
+
+// If this module is the main module, set up console capture automatically
+if (import.meta.url.endsWith('logger.js') && process.argv[1]?.endsWith('logger.js')) {
+    setupConsoleCapture();
 }

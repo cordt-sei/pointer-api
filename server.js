@@ -35,11 +35,11 @@ app.use(express.json());
 // Logging middleware
 app.use((req, res, next) => {
     const start = Date.now();
-    
+
     // Generate a unique request ID
     const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     req.requestId = requestId;
-    
+
     // Log request details
     const requestData = {
         requestId,
@@ -48,21 +48,21 @@ app.use((req, res, next) => {
         ip: req.ip || req.connection.remoteAddress,
         headers: req.headers
     };
-    
+
     // For DEBUG level, include request body
     if (LOG_LEVEL === 'DEBUG' && req.method !== 'GET') {
         requestData.body = req.body;
     }
-    
+
     log('INFO', `Request received: ${req.method} ${req.originalUrl}`, requestData);
-    
+
     // Capture response data
     const originalSend = res.send;
     res.send = function(body) {
         res.responseBody = body;
         return originalSend.call(this, body);
     };
-    
+
     // Log after response is sent
     res.on('finish', () => {
         const duration = Date.now() - start;
@@ -72,7 +72,7 @@ app.use((req, res, next) => {
             duration: `${duration}ms`,
             contentLength: res.get('Content-Length') || 0
         };
-        
+
         // For DEBUG level, include response body if it's not too large
         if (LOG_LEVEL === 'DEBUG' && res.responseBody) {
             try {
@@ -81,7 +81,7 @@ app.use((req, res, next) => {
                 if (typeof responseBody === 'string') {
                     responseBody = JSON.parse(responseBody);
                 }
-                
+
                 // Only include full response for reasonably sized responses
                 if (JSON.stringify(responseBody).length < 10000) {
                     responseData.body = responseBody;
@@ -92,11 +92,11 @@ app.use((req, res, next) => {
                 responseData.body = '[Error parsing response body]';
             }
         }
-        
+
         const logLevel = res.statusCode >= 400 ? 'ERROR' : 'INFO';
         log(logLevel, `Response sent: ${req.method} ${req.originalUrl} ${res.statusCode}`, responseData);
     });
-    
+
     next();
 });
 
@@ -106,14 +106,14 @@ function isValidAddress(address) {
     // and doesn't contain certain patterns that would indicate it's not a valid address
     const validPrefixes = ['0x', 'sei1', 'ibc/', 'factory/'];
     const hasValidPrefix = validPrefixes.some(prefix => address.startsWith(prefix));
-    
+
     // Check for invalid patterns (possibly from incorrect or unconventional query method)
-    const hasInvalidPattern = address.includes('=') || 
-                              address.includes('[') || 
-                              address.includes(']') || 
-                              address.includes('{') || 
+    const hasInvalidPattern = address.includes('=') ||
+                              address.includes('[') ||
+                              address.includes(']') ||
+                              address.includes('{') ||
                               address.includes('}');
-    
+
     return hasValidPrefix && !hasInvalidPattern;
 }
 
@@ -139,9 +139,9 @@ const RATE_LIMIT_ERROR = {
 app.get('/:address', async (req, res) => {
     try {
         let { address } = req.params;
-        log('DEBUG', `Processing GET request for address`, { 
+        log('DEBUG', `Processing GET request for address`, {
             requestId: req.requestId,
-            address 
+            address
         });
 
         if (!address) {
@@ -150,48 +150,48 @@ app.get('/:address', async (req, res) => {
 
         // Decode URL-encoded characters (e.g., %2F → /)
         address = decodeURIComponent(address);
-        log('DEBUG', `Decoded address for processing`, { 
+        log('DEBUG', `Decoded address for processing`, {
             requestId: req.requestId,
-            address 
+            address
         });
 
         // Validate address format
         if (!isValidAddress(address)) {
-            log('WARN', `Invalid address format rejected`, { 
+            log('WARN', `Invalid address format rejected`, {
                 requestId: req.requestId,
-                address 
+                address
             });
             return res.status(400).json(INVALID_ADDRESS_ERROR);
         }
 
         // Process the address and determine asset properties
-        log('INFO', `Determining asset properties for address`, { 
+        log('INFO', `Determining asset properties for address`, {
             requestId: req.requestId,
-            address 
+            address
         });
-        
+
         const result = await determineAssetProperties(address);
 
-        log('DEBUG', `Processed address result`, { 
+        log('DEBUG', `Processed address result`, {
             requestId: req.requestId,
-            address, 
-            result 
+            address,
+            result
         });
 
         // Check if there was an error in the result
         if (result.error) {
-            log('ERROR', `Error processing address`, { 
+            log('ERROR', `Error processing address`, {
                 requestId: req.requestId,
                 address,
-                error: result.error 
+                error: result.error
             });
-            
+
             return res.status(404).json({ error: result.error });
         }
 
         res.json(result);
     } catch (error) {
-        log('ERROR', 'Error processing GET request', { 
+        log('ERROR', 'Error processing GET request', {
             requestId: req.requestId,
             address: req.params.address,
             error: error.message,
@@ -223,11 +223,11 @@ app.post('/', async (req, res) => {
         } else if (Array.isArray(addresses)) {
             addressList = addresses;
         } else {
-            log('WARN', `Invalid POST request - missing address/addresses`, { 
+            log('WARN', `Invalid POST request - missing address/addresses`, {
                 requestId: req.requestId,
-                body: req.body 
+                body: req.body
             });
-            
+
             return res.status(400).json({
                 error: 'Request must include either "address" or an array called "addresses".',
                 details: 'Example valid requests:\n{ "address": "singleAddress" }\n{ "addresses": ["addressOne", "addressTwo"] }',
@@ -235,58 +235,79 @@ app.post('/', async (req, res) => {
             });
         }
 
-        log('DEBUG', `Processing POST request for addresses`, { 
+        log('DEBUG', `Processing POST request for addresses`, {
             requestId: req.requestId,
-            addressCount: addressList.length, 
-            addresses: addressList 
+            addressCount: addressList.length,
+            addresses: addressList
         });
 
         // Validate addresses
         if (addressList.length === 0) {
-            log('WARN', `Empty address list in POST request`, { 
-                requestId: req.requestId 
+            log('WARN', `Empty address list in POST request`, {
+                requestId: req.requestId
             });
-            
+
             return res.status(400).json({ error: 'No addresses provided.' });
         }
 
-        // Validate each address format
-        const invalidAddresses = addressList.filter(addr => !isValidAddress(addr));
-        if (invalidAddresses.length > 0) {
-            log('WARN', `Invalid addresses found in POST request`, { 
-                requestId: req.requestId,
-                invalidAddresses 
-            });
-            
-            return res.status(400).json({ 
-                error: 'Invalid address format detected in the request.', 
-                invalidAddresses
-            });
-        }
+// Validate each address format
+const invalidAddresses = addressList.filter(addr => !isValidAddress(addr));
+const validAddresses = addressList.filter(addr => isValidAddress(addr));
+
+if (invalidAddresses.length > 0) {
+    log('WARN', `Invalid addresses found in POST request`, {
+        requestId: req.requestId,
+        invalidAddresses
+    });
+
+    // If ALL addresses are invalid, return an error
+    if (validAddresses.length === 0) {
+        return res.status(400).json({
+            error: 'Invalid address format detected in the request.',
+            invalidAddresses
+        });
+    }
+    // Otherwise, continue with the valid addresses
+    log('INFO', `Continuing with ${validAddresses.length} valid addresses`, {
+        requestId: req.requestId
+    });
+}
 
 // Process each address and determine asset properties
 try {
-    log('INFO', `Processing batch of ${addressList.length} addresses`, { 
-        requestId: req.requestId 
+    log('INFO', `Processing batch of ${validAddresses.length} addresses`, {
+        requestId: req.requestId
     });
-    
-    const results = await Promise.all(
-        addressList.map(async (addr) => {
+
+    // Create result objects for invalid addresses
+    const invalidResults = invalidAddresses.map(addr => ({
+        address: addr,
+        error: 'Invalid address format',
+        isBaseAsset: null,
+        isPointer: null,
+        pointerType: 'UNKNOWN',
+        pointerAddress: null,
+        pointeeAddress: null
+    }));
+
+    // Process valid addresses
+    const validResults = await Promise.all(
+        validAddresses.map(async (addr) => {
             try {
-                log('DEBUG', `Processing address in batch`, { 
+                log('DEBUG', `Processing address in batch`, {
                     requestId: req.requestId,
-                    address: addr 
+                    address: addr
                 });
-                
+
                 return await determineAssetProperties(addr);
             } catch (addrError) {
-                log('ERROR', `Error processing individual address in batch`, { 
+                log('ERROR', `Error processing individual address in batch`, {
                     requestId: req.requestId,
-                    address: addr, 
+                    address: addr,
                     error: addrError.message,
                     stack: addrError.stack
                 });
-                
+
                 return {
                     address: addr,
                     error: 'Failed to process address: ' + addrError.message,
@@ -299,16 +320,22 @@ try {
             }
         })
     );
-            log('DEBUG', `Processed POST request results`, { 
-                requestId: req.requestId,
-                addressCount: addressList.length,
-                successCount: results.filter(r => !r.error).length,
-                errorCount: results.filter(r => r.error).length,
-                results: LOG_LEVEL === 'DEBUG' ? results : undefined
-            });
 
-            // Return a single object for a single address, or an array for multiple addresses
-            res.json(addressList.length === 1 ? results[0] : results);
+    // Combine results from both valid and invalid addresses
+    const results = [...validResults, ...invalidResults];
+
+    log('DEBUG', `Processed POST request results`, {
+        requestId: req.requestId,
+        addressCount: addressList.length,
+        validCount: validAddresses.length,
+        invalidCount: invalidAddresses.length,
+        successCount: validResults.filter(r => !r.error).length,
+        errorCount: validResults.filter(r => r.error).length + invalidResults.length,
+        results: LOG_LEVEL === 'DEBUG' ? results : undefined
+    });
+
+    // Return a single object for a single address, or an array for multiple addresses
+    res.json(addressList.length === 1 ? results[0] : results);
         } catch (error) {
             log('ERROR', 'Error processing batch of addresses', {
                 requestId: req.requestId,
