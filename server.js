@@ -264,42 +264,41 @@ app.post('/', async (req, res) => {
             });
         }
 
-        // Process each address and determine asset properties
-        try {
-            log('INFO', `Processing batch of ${addressList.length} addresses`, { 
-                requestId: req.requestId 
-            });
-            
-            const results = await Promise.all(
-                addressList.map(async (addr) => {
-                    try {
-                        log('DEBUG', `Processing address in batch`, { 
-                            requestId: req.requestId,
-                            address: addr 
-                        });
-                        
-                        return await determineAssetProperties(addr);
-                    } catch (addrError) {
-                        log('ERROR', `Error processing individual address in batch`, { 
-                            requestId: req.requestId,
-                            address: addr, 
-                            error: addrError.message,
-                            stack: addrError.stack
-                        });
-                        
-                        return {
-                            address: addr,
-                            error: 'Failed to process address: ' + addrError.message,
-                            isBaseAsset: null,
-                            isPointer: null,
-                            pointerType: null,
-                            pointerAddress: null,
-                            pointeeAddress: null
-                        };
-                    }
-                })
-            );
-
+// Process each address and determine asset properties
+try {
+    log('INFO', `Processing batch of ${addressList.length} addresses`, { 
+        requestId: req.requestId 
+    });
+    
+    const results = await Promise.all(
+        addressList.map(async (addr) => {
+            try {
+                log('DEBUG', `Processing address in batch`, { 
+                    requestId: req.requestId,
+                    address: addr 
+                });
+                
+                return await determineAssetProperties(addr);
+            } catch (addrError) {
+                log('ERROR', `Error processing individual address in batch`, { 
+                    requestId: req.requestId,
+                    address: addr, 
+                    error: addrError.message,
+                    stack: addrError.stack
+                });
+                
+                return {
+                    address: addr,
+                    error: 'Failed to process address: ' + addrError.message,
+                    isBaseAsset: null,
+                    isPointer: null,
+                    pointerType: null,
+                    pointerAddress: null,
+                    pointeeAddress: null
+                };
+            }
+        })
+    );
             log('DEBUG', `Processed POST request results`, { 
                 requestId: req.requestId,
                 addressCount: addressList.length,
