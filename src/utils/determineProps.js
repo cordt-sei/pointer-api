@@ -58,8 +58,8 @@ async function checkIsPointer(address, addressType) {
         ],
         EVM: [
             // Check if EVM address points to CW20, CW721, CW1155, or NATIVE
-            { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW20, pointer: address }, resultType: 'CW20' },
             { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW721, pointer: address }, resultType: 'CW721' },
+            { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW20, pointer: address }, resultType: 'CW20' },
             { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW1155, pointer: address }, resultType: 'CW1155' },
             { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.NATIVE, pointer: address }, resultType: 'NATIVE' }
         ]
@@ -79,51 +79,53 @@ async function checkIsPointer(address, addressType) {
         checks: pointerChecks[addressType].map(c => c.resultType)
     });
 
-    // Run all checks in parallel
-    const results = await Promise.all(
-        pointerChecks[addressType].map(async check => {
-            try {
-                const result = await queryAPI(check.endpoint, check.params);
-                return { check, result };
-            } catch (error) {
-                log('ERROR', `Error during pointer check for ${address}`, {
-                    checkId,
-                    check: check.resultType,
-                    error: error.message,
-                    stack: error.stack
-                });
-                return { check, result: null };
-            }
-        })
-    );
-
-    // Process results
-    for (const { check, result } of results) {
-        // Check if we got a valid result and it exists
-        if (result && result.exists) {
-            log('DEBUG', `Found ${check.resultType} pointee for ${address}`, { 
+    // run checks sequentially to isolate any issues
+    for (const check of pointerChecks[addressType]) {
+        try {
+            log('DEBUG', `Running check for ${check.resultType} pointer type`, {
                 checkId,
-                pointee: result.pointee,
-                version: result.version
+                address,
+                pointerType: check.params.pointerType
             });
             
-            return { 
-                isPointer: true, 
-                pointerType: check.resultType,
-                pointeeAddress: result.pointee
-            };
-        } else if (result) {
-            // We got a response but the pointer doesn't exist
-            log('DEBUG', `${address} is not a ${check.resultType} pointer`, {
+            const result = await queryAPI(check.endpoint, check.params);
+            
+            // log full result for debugging
+            log('DEBUG', `Got result for ${check.resultType} check`, {
                 checkId,
-                exists: false,
-                responseReceived: true
+                result,
+                exists: result ? result.exists : false,
+                pointee: result && result.exists ? result.pointee : null
             });
-        } else {
-            // We didn't get a valid response
-            log('WARN', `Failed to determine if ${address} is a ${check.resultType} pointer`, {
+            
+            // check if valid result with exists=true
+            if (result && result.exists) {
+                log('DEBUG', `Found ${check.resultType} pointee for ${address}`, { 
+                    checkId,
+                    pointee: result.pointee,
+                    version: result.version
+                });
+                
+                return { 
+                    isPointer: true, 
+                    pointerType: check.resultType,
+                    pointeeAddress: result.pointee
+                };
+            }
+            
+            // if response but exists=false, log it
+            if (result) {
+                log('DEBUG', `${address} is not a ${check.resultType} pointer`, {
+                    checkId,
+                    exists: false
+                });
+            }
+        } catch (error) {
+            log('ERROR', `Error during pointer check for ${address}`, {
                 checkId,
-                responseReceived: false
+                check: check.resultType,
+                error: error.message,
+                stack: error.stack
             });
         }
     }
@@ -147,14 +149,14 @@ async function checkBaseAssetPointer(address, addressType) {
     const baseChecks = {
         CW: [
             // Check if CW address has an ERC20, ERC721, or ERC1155 pointer
-            { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW20, pointee: address }, resultType: 'CW20' },
             { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW721, pointee: address }, resultType: 'CW721' },
+            { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW20, pointee: address }, resultType: 'CW20' },
             { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW1155, pointee: address }, resultType: 'CW1155' }
         ],
         EVM: [
             // Check if EVM address has a CW20, CW721, or CW1155 pointer
-            { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC20, pointee: address }, resultType: 'ERC20' },
             { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC721, pointee: address }, resultType: 'ERC721' },
+            { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC20, pointee: address }, resultType: 'ERC20' },
             { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC1155, pointee: address }, resultType: 'ERC1155' }
         ],
         NATIVE: [
@@ -177,50 +179,52 @@ async function checkBaseAssetPointer(address, addressType) {
         checks: baseChecks[addressType].map(c => c.resultType) 
     });
 
-    // Run all checks in parallel
-    const results = await Promise.all(
-        baseChecks[addressType].map(async check => {
-            try {
-                const result = await queryAPI(check.endpoint, check.params);
-                return { check, result };
-            } catch (error) {
-                log('ERROR', `Error during base asset check for ${address}`, {
-                    checkId,
-                    check: check.resultType,
-                    error: error.message,
-                    stack: error.stack
-                });
-                return { check, result: null };
-            }
-        })
-    );
-
-    // Process results
-    for (const { check, result } of results) {
-        // Check if we got a valid result and it exists
-        if (result && result.exists) {
-            log('DEBUG', `Found ${check.resultType} pointer for ${address}`, { 
+    // run checks sequentially to isolate any issues
+    for (const check of baseChecks[addressType]) {
+        try {
+            log('DEBUG', `Running base asset check for ${check.resultType}`, {
                 checkId,
-                pointer: result.pointer,
-                version: result.version
+                address,
+                pointerType: check.params.pointerType
             });
             
-            return { 
-                pointerAddress: result.pointer,
-                pointerType: check.resultType
-            };
-        } else if (result) {
-            // We got a response but the pointer doesn't exist
-            log('DEBUG', `${address} doesn't have a ${check.resultType} pointer`, {
+            const result = await queryAPI(check.endpoint, check.params);
+            
+            // Log the full result for debugging
+            log('DEBUG', `Got result for ${check.resultType} base asset check`, {
                 checkId,
-                exists: false,
-                responseReceived: true
+                result,
+                exists: result ? result.exists : false,
+                pointer: result && result.exists ? result.pointer : null
             });
-        } else {
-            // We didn't get a valid response
-            log('WARN', `Failed to determine if ${address} has a ${check.resultType} pointer`, {
+            
+            // check if valid result with exists=true
+            if (result && result.exists) {
+                log('DEBUG', `Found ${check.resultType} pointer for ${address}`, { 
+                    checkId,
+                    pointer: result.pointer,
+                    version: result.version
+                });
+                
+                return { 
+                    pointerAddress: result.pointer,
+                    pointerType: check.resultType
+                };
+            }
+            
+            // if response but exists=false, log it
+            if (result) {
+                log('DEBUG', `${address} doesn't have a ${check.resultType} pointer`, {
+                    checkId,
+                    exists: false
+                });
+            }
+        } catch (error) {
+            log('ERROR', `Error during base asset check for ${address}`, {
                 checkId,
-                responseReceived: false
+                check: check.resultType,
+                error: error.message,
+                stack: error.stack
             });
         }
     }
@@ -286,10 +290,22 @@ export async function determineAssetProperties(address) {
         log('DEBUG', `${address} is not a pointer, checking if it's a base asset with a pointer`, { processId });
         const baseAssetCheck = await checkBaseAssetPointer(address, addressType);
         
-        // Early return if no pointer was found
-        if (!baseAssetCheck.pointerAddress) {
-            log('DEBUG', `${address} is a base asset with no pointer`, { processId });
-            return {
+        // Return base asset details with pointer information (if any)
+        if (baseAssetCheck.pointerAddress) {
+            const result = {
+                address,
+                isBaseAsset: true,
+                isPointer: false,
+                pointerType: baseAssetCheck.pointerType,
+                pointerAddress: baseAssetCheck.pointerAddress,
+                pointeeAddress: ''
+            };
+            
+            log('DEBUG', `${address} is a base asset with ${baseAssetCheck.pointerType} pointer: ${baseAssetCheck.pointerAddress}`, { processId });
+            return result;
+        } else {
+            // No pointer was found, return base asset with default type
+            const result = {
                 address,
                 isBaseAsset: true,
                 isPointer: false,
@@ -297,20 +313,10 @@ export async function determineAssetProperties(address) {
                 pointerAddress: '',
                 pointeeAddress: ''
             };
+            
+            log('DEBUG', `${address} is a base asset with no pointer`, { processId });
+            return result;
         }
-        
-        // Return base asset details with pointer information
-        const result = {
-            address,
-            isBaseAsset: true,
-            isPointer: false,
-            pointerType: baseAssetCheck.pointerType,
-            pointerAddress: baseAssetCheck.pointerAddress,
-            pointeeAddress: ''
-        };
-
-        log('DEBUG', `Final result for ${address}`, { processId, result });
-        return result;
 
     } catch (error) {
         log('ERROR', `Error determining properties for ${address}`, { 
