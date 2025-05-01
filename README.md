@@ -11,12 +11,15 @@ A unified API for checking pointer and pointee relationships of addresses on the
 - Concurrent processing for large batches
 - Comprehensive structured logging
 - Robust error handling
+- HTTP caching with ETags
+- In-memory LRU caching
+- API key support [bypasses max batch size, more detailed /health endpoint]
 
 ## Requirements
 
 - Node.js v18+
 - Yarn or npm
-- Dependencies: axios, express, dotenv
+- Dependencies: axios, express, dotenv, lru-cache
 
 ## Installation
 
@@ -37,11 +40,111 @@ A unified API for checking pointer and pointee relationships of addresses on the
 
   ```env
   SEIREST=https://rest.sei-apis.com
-  API_KEY=your_api_key_here
   PORT=3003
   LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARN, ERROR
   LOG_FILE=/var/log/pointer-api.log
+  AUTHORIZED_API_KEYS=key1,key2,key3  # Comma-separated list of valid API keys
+  API_KEY_HEADER=X-API-Key  # Optional: custom header label
+  INTERNAL_IP_PREFIXES=10.,192.168.,172.16.,172.17.,127.  # Comma-separated list of internal IP prefixes
+  CACHE_MAX_SIZE=500        # Max entries in cache
+  CACHE_TTL_MS=300000       # Cache TTL in ms (5 min default)
   ```
+
+## API Key Management
+
+### Generating Secure API Keys
+
+API keys should be cryptographically secure random strings. Here are methods to generate them:
+
+```bash
+# Using Node.js (recommended)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Using OpenSSL
+openssl rand -hex 32
+
+# Using bash
+cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1
+```
+
+### Configuring API Keys
+
+1. Generate one or more API keys using the methods above
+2. Add them to your environment configuration:
+   
+   ```env
+   # In .env file
+   AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p
+   ```
+
+   Or when starting the server:
+   ```bash
+   AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p node server.js
+   ```
+
+   Or in your systemd service file:
+   ```ini
+   Environment="AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p"
+   ```
+
+### API Key Benefits
+
+Users with valid API keys enjoy elevated privileges:
+- **Unlimited batch sizes**: Authorized users can submit requests with any number of addresses (non-authorized users are limited to 25 addresses per request)
+- **Enhanced health metrics**: Authorized users receive detailed information in the `/health` endpoint, including memory usage, cache hit rates, and version information
+
+Requests from internal network IPs are automatically authorized without requiring an API key.
+
+### Using API Keys (Client Documentation)
+
+To authenticate your requests:
+
+```bash
+# Include the X-API-Key header in your requests
+curl -X POST https://pointer.basementnodes.ca/ \
+-H "Content-Type: application/json" \
+-H "X-API-Key: your-api-key-here" \
+-d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
+```
+
+For programmatic clients:
+
+```javascript
+// JavaScript example
+fetch('https://pointer.basementnodes.ca/', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key-here'
+  },
+  body: JSON.stringify({
+    addresses: ['0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae']
+  })
+})
+```
+
+```python
+# Python example
+import requests
+headers = {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key-here'
+}
+data = {
+    'addresses': ['0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae']
+}
+response = requests.post('https://pointer.basementnodes.ca/', headers=headers, json=data)
+```
+
+### Security Recommendations
+
+When implementing API keys:
+
+- Store keys securely and never commit them to version control
+- Rotate keys periodically (e.g., every 90 days)
+- Revoke keys that may have been compromised
+- Use a different key for each client or service
+- Log and monitor API key usage for suspicious patterns
 
 ## Running the API
 
@@ -111,7 +214,7 @@ curl -X GET https://pointer.basementnodes.ca/factory%2Fsei1e3gttzq5e5k49f9f5gzvr
 
 ### POST `/`
 
-Checks multiple addresses. The request body can contain a single address or an array of addresses.
+Checks either a single address or multiple addresses in a single request. The request body should contain either an `address` field for a single address or an `addresses` array for multiple addresses.
 
 **Examples:**
 
@@ -119,21 +222,77 @@ Checks multiple addresses. The request body can contain a single address or an a
 # Single address
 curl -X POST https://pointer.basementnodes.ca/ \
 -H "Content-Type: application/json" \
--d '{"address": "0x809FF4801aA5bDb33045d1fEC810D082490D63a4"}'
+-d '{"address": "0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae"}'
 
 # Multiple addresses
 curl -X POST https://pointer.basementnodes.ca/ \
 -H "Content-Type: application/json" \
 -d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
+
+# With API key for unlimited batch size
+curl -X POST https://pointer.basementnodes.ca/ \
+-H "Content-Type: application/json" \
+-H "X-API-Key: your-api-key-here" \
+-d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
 ```
 
-Response for multiple addresses is an array of results.
+For a single address, this endpoint returns a single object. For multiple addresses, it returns an array of objects.
+
+### GET `/health`
+
+Returns the current status and health metrics of the API.
+
+**Example:**
+
+```bash
+curl -X GET https://pointer.basementnodes.ca/health
+```
+
+**Response for unauthorized users:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-04-27T15:23:45.678Z",
+  "uptime": 86400.123,
+  "cacheStats": {
+    "size": 123,
+    "maxSize": 500
+  }
+}
+```
+
+**Additional response data for authorized users:**
+
+```json
+{
+  "version": "1.6.0",
+  "nodeVersion": "v18.16.0",
+  "environment": "production",
+  "logLevel": "INFO",
+  "memoryUsage": {
+    "rss": 56123456,
+    "heapTotal": 34123456,
+    "heapUsed": 27654321,
+    "external": 1234567
+  },
+  "authorization": {
+    "method": "api_key"  // or "internal_network"
+  },
+  "cacheStats": {
+    "hits": 12345,
+    "misses": 2345,
+    "hitRate": 0.84
+  }
+}
+```
 
 ## Error Handling
 
 The API returns standard HTTP status codes:
 
 - `200 OK`: Request successful
+- `304 Not Modified`: ETag matches, content unchanged
 - `400 Bad Request`: Invalid input format or address
 - `403 Forbidden`: API key invalid/missing
 - `429 Too Many Requests`: Rate limit exceeded
@@ -151,6 +310,18 @@ The API includes a structured logging system with configurable levels:
 - `ERROR`: Error conditions with stack traces
 
 All logs are in JSON format and can be written to a file specified by the `LOG_FILE` environment variable.
+
+## Caching
+
+The API implements two levels of caching:
+
+1. **In-memory LRU cache**: Stores recent query results to avoid redundant processing
+   - Cache size and TTL are configurable via environment variables
+   - Helps reduce load on the Sei REST API
+
+2. **HTTP caching with ETags**: Allows clients to skip re-fetching unchanged data
+   - Responses include ETag headers based on content hash
+   - Clients can use If-None-Match headers for conditional requests
 
 ## Testing
 
@@ -177,9 +348,12 @@ Restart=on-failure
 User=root
 Environment=PORT=3003
 Environment=SEIREST=https://rest.sei-apis.com
-Environment=API_KEY=your_api_key_here
 Environment=LOG_LEVEL=INFO
 Environment=LOG_FILE=/var/log/pointer-api.log
+Environment=AUTHORIZED_API_KEYS=key1,key2,key3
+Environment=CACHE_MAX_SIZE=500
+Environment=CACHE_TTL_MS=300000
+Environment=API_KEY_HEADER=X-API-Key
 
 [Install]
 WantedBy=multi-user.target
@@ -188,27 +362,38 @@ WantedBy=multi-user.target
 ### Caddy Configuration
 
 ```caddyfile
-web-app.your.domain {
-    log {
-        output file /var/log/pointerapi.log
-        format json
-        level info
+pointer.basementnodes.ca {
+    # 1. Static files first
+    @robots path /robots.txt
+    handle @robots {
+        file_server
     }
-
-    # Handle special characters in URLs
+    @favicon path /favicon.ico
+    handle @favicon {
+        file_server
+    }
+    
+    # 2. Catch literal "/", return 404
+    @root path /
+    handle @root {
+        respond "Invalid endpoint" 404
+    }
+    
+    # 3. URL-encoding rewrites
     @ibcInvalidURL path_regexp ibcPath ^/ibc/([^/]+)$
     rewrite @ibcInvalidURL /ibc%2F{re.ibcPath.1}
-
+    
     @factoryInvalidURL path_regexp factoryPath ^/factory/([^/]+)/([^/]+)$
     rewrite @factoryInvalidURL /factory%2F{re.factoryPath.1}%2F{re.factoryPath.2}
-
-    # Proxy to API
-    reverse_proxy 127.0.0.1:3003 {
+    
+    # 4. Everything else → your API
+    reverse_proxy 10.70.48.203:3003 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
-
-    # Security headers
+    
+    encode gzip
+    
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -217,8 +402,12 @@ web-app.your.domain {
         Referrer-Policy "no-referrer-when-downgrade"
         Permissions-Policy "geolocation=(), camera=(), microphone=(), interest-cohort=()"
     }
-
-    encode gzip
+    
+    log {
+        output file /var/log/pointer-basementnodes.log
+        format json
+        level info
+    }
 }
 ```
 
