@@ -372,7 +372,7 @@ app.post('/', async (req, res) => {
         }
 
         // Apply batch size limits for unauthenticated users
-        const REGULAR_MAX_BATCH_SIZE = 300;
+        const REGULAR_MAX_BATCH_SIZE = 30;
         
         if (!req.isAuthorized && addressList.length > REGULAR_MAX_BATCH_SIZE) {
             log('WARN', `Batch size exceeded limit for unauthorized request`, {
