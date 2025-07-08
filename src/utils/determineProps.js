@@ -149,6 +149,23 @@ async function checkIsPointer(address, addressType) {
             
             // If we got a valid result with exists=true, we found a match
             if (result && result.exists) {
+                // Check if the pointee is a NATIVE asset (ibc/ or factory/)
+                if (result.pointee && (result.pointee.startsWith('ibc/') || result.pointee.startsWith('factory/'))) {
+                    log('DEBUG', `Pointee ${result.pointee} is a NATIVE asset, overriding pointer type from ${check.resultType} to NATIVE`, { 
+                        checkId,
+                        originalType: check.resultType,
+                        pointee: result.pointee,
+                        version: result.version
+                    });
+                    
+                    return { 
+                        isPointer: true, 
+                        pointerType: 'NATIVE',  // Override to NATIVE
+                        pointeeAddress: result.pointee
+                    };
+                }
+                
+                // Otherwise use the detected type
                 log('DEBUG', `Found ${check.resultType} pointee for ${address}`, { 
                     checkId,
                     pointee: result.pointee,
@@ -344,9 +361,9 @@ export async function determineAssetProperties(address) {
         const preCheck = performAddressPreCheck(address, addressType);
 
         // For NATIVE assets, we know they are always base assets
-        // Just need to check if they have an EVM pointer
+        // Just need to check if they have a NATIVE pointer
         if (addressType === 'NATIVE') {
-            log('DEBUG', `${address} is a NATIVE asset, checking for EVM pointer`, { processId });
+            log('DEBUG', `${address} is a NATIVE asset, checking for NATIVE pointer`, { processId });
             const baseAssetCheck = await checkBaseAssetPointer(address, addressType);
             
             const result = {
