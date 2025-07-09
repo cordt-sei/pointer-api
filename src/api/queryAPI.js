@@ -5,7 +5,7 @@ import { log } from '../utils/logger.js';
 dotenv.config();
 
 const SEIREST = process.env.SEIREST || 'https://rest.sei-apis.com';
-const API_KEY = process.env.API_KEY || 'a48f0d74'; // Fallback to provided key if env variable not set
+const API_KEY = process.env.API_KEY || '<your-key-here>'; // Fallback to provided key if env variable not set
 
 /**
  * Query the Sei REST API with proper error handling
