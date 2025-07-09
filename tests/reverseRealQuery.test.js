@@ -10,7 +10,7 @@ const reverseTestCases = [
     description: "Pair test: EVM base asset and its CW pointer",
     addresses: [
       '0x809FF4801aA5bDb33045d1fEC810D082490D63a4',
-      'sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl'
+      'sei15ulpjml9ddyyupy9sawwc7wnmnzfl44jyg3j43e4vy5cfwgunh8qfhag22'
     ],
     relation: 'pointer-pointee'
   },
