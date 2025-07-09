@@ -12,7 +12,7 @@
   "author": "Cordt Hanson",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.10.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.0",
     "lru-cache": "10"
