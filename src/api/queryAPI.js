@@ -4,8 +4,9 @@ import { log } from '../utils/logger.js';
 
 dotenv.config();
 
-const SEIREST = process.env.SEIREST || 'https://rest.sei-apis.com';
-const API_KEY = process.env.API_KEY || '<your-key-here>'; // Fallback to provided key if env variable not set
+const SEIREST = process.env.SEIREST || 'https://pacific-1-skip-api.polkachu.com';
+const USERNAME = process.env.API_USERNAME;
+const PASSWORD = process.env.API_PASSWORD;
 
 /**
  * Query the Sei REST API with proper error handling
@@ -29,14 +30,15 @@ export async function queryAPI(endpoint, params) {
         // Create a copy of the params to avoid modifying the original
         const queryParams = { ...params };
         
-        // Add the API key as a query parameter
-        queryParams['x-apikey'] = API_KEY;
-        
         // Track request time for performance monitoring
         const startTime = Date.now();
         
         const response = await axios.get(`${SEIREST}${endpoint}`, {
             params: queryParams,
+            auth: {
+                username: USERNAME,
+                password: PASSWORD
+            },
             timeout: 5000 // 5 second timeout to prevent hanging
         });
         
