@@ -4,7 +4,7 @@ import { log } from '../utils/logger.js';
 
 dotenv.config();
 
-const SEIREST = process.env.SEIREST || 'https://pacific-1-skip-api.polkachu.com';
+const SEIREST = process.env.SEIREST;
 const USERNAME = process.env.API_USERNAME;
 const PASSWORD = process.env.API_PASSWORD;
 
