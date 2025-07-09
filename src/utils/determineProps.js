@@ -46,18 +46,18 @@ function determineAddressType(address) {
 function getPrioritizedPointerChecks(addressType) {
     switch (addressType) {
         case 'EVM':
-            // EVM addresses are most commonly CW721 pointers, then CW20/CW1155/NATIVE
+            // Check CW20 first, then CW721/CW1155/NATIVE
             return [
-                { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW721, pointer: null }, resultType: 'CW721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW20, pointer: null }, resultType: 'CW20' },
+                { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW721, pointer: null }, resultType: 'CW721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.CW1155, pointer: null }, resultType: 'CW1155' },
                 { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.NATIVE, pointer: null }, resultType: 'NATIVE' }
             ];
         case 'CW':
-            // CW addresses are most commonly ERC721 pointers, then ERC20/ERC1155
+            // Check ERC20 first, then ERC721/ERC1155
             return [
-                { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.ERC721, pointer: null }, resultType: 'ERC721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.ERC20, pointer: null }, resultType: 'ERC20' },
+                { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.ERC721, pointer: null }, resultType: 'ERC721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointee', params: { pointerType: POINTER_TYPES.ERC1155, pointer: null }, resultType: 'ERC1155' }
             ];
         default:
@@ -74,17 +74,17 @@ function getPrioritizedPointerChecks(addressType) {
 function getPrioritizedBaseAssetChecks(addressType) {
     switch (addressType) {
         case 'EVM':
-            // EVM base assets are most commonly ERC721, then ERC20/ERC1155
+            // Check ERC20 first, then ERC721/ERC1155
             return [
-                { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC721, pointee: null }, resultType: 'ERC721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC20, pointee: null }, resultType: 'ERC20' },
+                { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC721, pointee: null }, resultType: 'ERC721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.ERC1155, pointee: null }, resultType: 'ERC1155' }
             ];
         case 'CW':
-            // CW base assets are most commonly CW721, then CW20/CW1155
+            // Check CW20 first, then CW721/CW1155
             return [
-                { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW721, pointee: null }, resultType: 'CW721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW20, pointee: null }, resultType: 'CW20' },
+                { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW721, pointee: null }, resultType: 'CW721' },
                 { endpoint: '/sei-protocol/seichain/evm/pointer', params: { pointerType: POINTER_TYPES.CW1155, pointee: null }, resultType: 'CW1155' }
             ];
         case 'NATIVE':
