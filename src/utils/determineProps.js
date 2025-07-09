@@ -149,6 +149,23 @@ async function checkIsPointer(address, addressType) {
             
             // If we got a valid result with exists=true, we found a match
             if (result && result.exists) {
+                // Check if the pointee is a NATIVE asset (ibc/ or factory/)
+                if (result.pointee && (result.pointee.startsWith('ibc/') || result.pointee.startsWith('factory/'))) {
+                    log('DEBUG', `Pointee ${result.pointee} is a NATIVE asset, overriding pointer type from ${check.resultType} to NATIVE`, { 
+                        checkId,
+                        originalType: check.resultType,
+                        pointee: result.pointee,
+                        version: result.version
+                    });
+                    
+                    return { 
+                        isPointer: true, 
+                        pointerType: 'NATIVE',  // Override to NATIVE
+                        pointeeAddress: result.pointee
+                    };
+                }
+                
+                // Otherwise use the detected type
                 log('DEBUG', `Found ${check.resultType} pointee for ${address}`, { 
                     checkId,
                     pointee: result.pointee,
@@ -323,6 +340,19 @@ export async function determineAssetProperties(address) {
     const processId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     
     try {
+        // Check for manual override: null address (0x0000...) points to native usei
+        if (address === '0x0000000000000000000000000000000000000000') {
+            log('DEBUG', `Manual override for null address ${address}`, { processId });
+            return {
+                address: '0x0000000000000000000000000000000000000000',
+                isBaseAsset: false,
+                isPointer: true,
+                pointerType: 'NATIVE',
+                pointerAddress: '',
+                pointeeAddress: 'usei'
+            };
+        }
+        
         // Determine address type (CW, EVM, NATIVE, UNKNOWN)
         const addressType = determineAddressType(address);
         log('DEBUG', `Processing ${address}`, { processId, type: addressType });
@@ -331,9 +361,9 @@ export async function determineAssetProperties(address) {
         const preCheck = performAddressPreCheck(address, addressType);
 
         // For NATIVE assets, we know they are always base assets
-        // Just need to check if they have an EVM pointer
+        // Just need to check if they have a NATIVE pointer
         if (addressType === 'NATIVE') {
-            log('DEBUG', `${address} is a NATIVE asset, checking for EVM pointer`, { processId });
+            log('DEBUG', `${address} is a NATIVE asset, checking for NATIVE pointer`, { processId });
             const baseAssetCheck = await checkBaseAssetPointer(address, addressType);
             
             const result = {
@@ -349,38 +379,27 @@ export async function determineAssetProperties(address) {
             return result;
         }
         
-        // Based on pre-check, determine order of checks
+        // Always check both pointer and base asset status
         let isPointer = false;
         let pointerType = '';
         let pointeeAddress = '';
         let pointerAddress = '';
         
-        // If likely to be a pointer, check that first
-        if (preCheck.isLikelyPointer) {
-            log('DEBUG', `Checking if ${address} is a pointer to another asset`, { processId });
-            const pointerCheck = await checkIsPointer(address, addressType);
+        // First, check if the address is a pointer to another asset
+        log('DEBUG', `Checking if ${address} is a pointer to another asset`, { processId });
+        const pointerCheck = await checkIsPointer(address, addressType);
+        
+        if (pointerCheck.isPointer) {
+            isPointer = true;
+            pointerType = pointerCheck.pointerType;
+            pointeeAddress = pointerCheck.pointeeAddress;
             
-            if (pointerCheck.isPointer) {
-                isPointer = true;
-                pointerType = pointerCheck.pointerType;
-                pointeeAddress = pointerCheck.pointeeAddress;
-                
-                log('DEBUG', `${address} is a ${pointerType} pointer to ${pointeeAddress}`, { processId });
-                
-                return {
-                    address,
-                    isBaseAsset: false,
-                    isPointer: true,
-                    pointerType,
-                    pointerAddress: '',
-                    pointeeAddress
-                };
-            }
+            log('DEBUG', `${address} is a ${pointerType} pointer to ${pointeeAddress}`, { processId });
         }
         
-        // If not a pointer (or not likely to be one), check if it's a base asset with a pointer
-        if (preCheck.isLikelyBaseAsset) {
-            log('DEBUG', `${address} is not a pointer, checking if it's a base asset with a pointer`, { processId });
+        // Always check if it's a base asset with a pointer (even if it's also a pointer)
+        if (!isPointer) {
+            log('DEBUG', `Checking if ${address} is a base asset with a pointer`, { processId });
             const baseAssetCheck = await checkBaseAssetPointer(address, addressType);
             
             if (baseAssetCheck.pointerAddress) {
@@ -388,28 +407,29 @@ export async function determineAssetProperties(address) {
                 pointerType = baseAssetCheck.pointerType;
                 
                 log('DEBUG', `${address} is a base asset with ${pointerType} pointer: ${pointerAddress}`, { processId });
-                
-                return {
-                    address,
-                    isBaseAsset: true,
-                    isPointer: false,
-                    pointerType,
-                    pointerAddress,
-                    pointeeAddress: ''
-                };
             }
         }
         
-        // If neither pointer nor base asset with pointer, return as base asset with default type
-        log('DEBUG', `${address} is a base asset with no pointer`, { processId });
-        return {
-            address,
-            isBaseAsset: true,
-            isPointer: false,
-            pointerType: addressType,
-            pointerAddress: '',
-            pointeeAddress: ''
-        };
+        // Return the complete asset information
+        if (isPointer) {
+            return {
+                address,
+                isBaseAsset: false,
+                isPointer: true,
+                pointerType,
+                pointerAddress: '',
+                pointeeAddress
+            };
+        } else {
+            return {
+                address,
+                isBaseAsset: true,
+                isPointer: false,
+                pointerType: pointerType || addressType,
+                pointerAddress: pointerAddress || '',
+                pointeeAddress: ''
+            };
+        }
     } catch (error) {
         log('ERROR', `Error determining properties for ${address}`, { 
             processId,
