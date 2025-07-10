@@ -243,9 +243,9 @@ app.get('/health', (req, res) => {
 });
 
 // Route to handle GET requests with an address parameter
-app.get('/:address', async (req, res) => {
+app.get('/*', async (req, res) => {
     try {
-        let { address } = req.params;
+        let address = req.params[0];
 
         log('DEBUG', `Processing GET request for address`, {
             requestId: req.requestId,
