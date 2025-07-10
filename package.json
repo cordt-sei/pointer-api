@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "LOG_LEVEL=DEBUG node server.js",
-    "test": "node tests/assetProperties.test.js && node tests/realQueryTest.js && node tests/reverseRealQueryTest.js && node tests/errorResponseTest.js"
+    "test": "node tests/assetProperties.test.js && node tests/realQueryTest.js && node tests/reverseRealQueryTest.js && node tests/errorResponseTest.js && node tests/ibcRegexPattern.test.js"
   },
   "author": "Cordt Hanson",
   "license": "MIT",

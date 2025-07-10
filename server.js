@@ -174,15 +174,35 @@ function isValidAddress(address) {
 
     if (hasInvalidPattern) return false;
 
-    // Check if the address starts with any of the expected prefixes
-    const validPrefixes = ['0x', 'sei1', 'ibc/', 'factory/'];
-    return validPrefixes.some(prefix => address.startsWith(prefix));
+    // Validate specific address formats
+    if (address.startsWith('0x')) {
+        // EVM addresses must be 42 characters (0x + 40 hex chars) and valid hex
+        return /^0x[a-fA-F0-9]{40}$/.test(address);
+    } else if (address.startsWith('sei1')) {
+        // Bech32 CosmWasm addresses: sei1 + alphanumeric chars
+        // Variable length, but must be valid bech32 format (lowercase alphanumeric after prefix)
+        return /^sei1[a-z0-9]+$/.test(address) && address.length >= 10;
+    } else if (address.startsWith('ibc/')) {
+        // IBC denoms: ibc/ + uppercase hex hash (typically 64 chars but can vary)
+        const hash = address.substring(4);
+        return hash.length > 0 && /^[A-F0-9]+$/.test(hash);
+    } else if (address.startsWith('factory/')) {
+        // TokenFactory denoms: factory/{creator}/{subdenom}
+        const parts = address.substring(8).split('/');
+        if (parts.length !== 2) return false;
+        const [creator, subdenom] = parts;
+        // Creator should be a valid bech32 address, subdenom should be non-empty
+        return creator.length > 0 && subdenom.length > 0 && 
+               /^sei1[a-z0-9]+$/.test(creator) && creator.length >= 10;
+    }
+    
+    return false;
 }
 
 // Standardized error messages
 const INVALID_ADDRESS_ERROR = {
     error: 'Invalid address format',
-    details: 'Address must start with 0x, sei1, ibc/, or factory/ and contain no special characters.'
+    details: 'Valid formats: EVM hex (0x + 40 hex chars), Bech32 CosmWasm (sei1...), IBC denom (ibc/HASH), TokenFactory (factory/creator/subdenom)'
 };
 
 const API_ERROR = {
@@ -243,9 +263,9 @@ app.get('/health', (req, res) => {
 });
 
 // Route to handle GET requests with an address parameter
-app.get('/:address', async (req, res) => {
+app.get('/*', async (req, res) => {
     try {
-        let { address } = req.params;
+        let address = req.params[0];
 
         log('DEBUG', `Processing GET request for address`, {
             requestId: req.requestId,
