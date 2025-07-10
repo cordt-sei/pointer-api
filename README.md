@@ -1,259 +1,186 @@
-# Sei Asset-Pointer API
+# Sei Pointer API
 
-A unified API for checking pointer and pointee relationships of addresses on the Sei Network. Accepts any valid asset denom or contract address as input and returns relevant details without requiring users to specify address type.
+This API resolves pointer relationships between assets on Sei Network. It accepts any address or denomination and returns whether it's a base asset or pointer, along with related addresses.
+
+## Quick Start
+
+```bash
+# Check if an address is a pointer or base asset
+curl https://pointer.basementnodes.ca/0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1
+
+# Response shows this EVM address points to an IBC token
+{
+  "address": "0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1",
+  "isBaseAsset": false,
+  "isPointer": true,
+  "pointerType": "NATIVE",
+  "pointerAddress": "",
+  "pointeeAddress": "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0"
+}
+```
 
 ## Features
 
-- Identifies asset types (EVM, CW, NATIVE)
-- Checks whether an address/denom is a base asset or pointer
-- Retrieves associated pointer or pointee addresses
-- Supports multiple inputs for batch processing
-- Concurrent processing for large batches
-- Comprehensive structured logging
-- Robust error handling
-- HTTP caching with ETags
-- In-memory LRU caching
-- API key support [bypasses max batch size, more detailed /health endpoint]
+- Identifies asset types (EVM, CosmWasm, Native)
+- Determines if an address is a base asset or pointer
+- Returns associated pointer or pointee addresses
+- Batch processing for multiple addresses
+- Response caching
+- API key authentication
+- Structured JSON logging
 
 ## Requirements
 
-- Node.js v18+
-- Yarn or npm
-- Dependencies: axios, express, dotenv, lru-cache
+- Node.js 18 or higher
+- npm or yarn
 
 ## Installation
 
-- Clone the repository:
-
-  ```bash
-  git clone https://github.com/yourusername/sei-address-checker.git
-  cd sei-address-checker
-  ```
-
-- Install dependencies:
-
-  ```bash
-  yarn install
-  ```
-
-- Configure environment in `.env`:
-
-  ```env
-  SEIREST=https://rest.sei-apis.com
-  PORT=3003
-  LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARN, ERROR
-  LOG_FILE=/var/log/pointer-api.log
-  AUTHORIZED_API_KEYS=key1,key2,key3  # Comma-separated list of valid API keys
-  API_KEY_HEADER=X-API-Key  # Optional: custom header label
-  INTERNAL_IP_PREFIXES=10.,192.168.,172.16.,172.17.,127.  # Comma-separated list of internal IP prefixes
-  CACHE_MAX_SIZE=500        # Max entries in cache
-  CACHE_TTL_MS=300000       # Cache TTL in ms (5 min default)
-  ```
-
-## API Key Management
-
-### Generating Secure API Keys
-
-API keys should be cryptographically secure random strings. Here are methods to generate them:
-
-```bash
-# Using Node.js (recommended)
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-# Using OpenSSL
-openssl rand -hex 32
-
-# Using bash
-cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1
-```
-
-### Configuring API Keys
-
-1. Generate one or more API keys using the methods above
-2. Add them to your environment configuration:
-   
-   ```env
-   # In .env file
-   AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p
-   ```
-
-   Or when starting the server:
+1. Clone the repository:
    ```bash
-   AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p node server.js
+   git clone https://github.com/cordt-sei/pointer-api.git
+   cd pointer-api
    ```
 
-   Or in your systemd service file:
-   ```ini
-   Environment="AUTHORIZED_API_KEYS=8a7b6c5d4e3f2g1h,9i8j7k6l5m4n3o2p"
+2. Install dependencies:
+   ```bash
+   npm install
    ```
 
-### API Key Benefits
+3. Create `.env` file:
+   ```env
+   SEIREST=https://rest.sei-apis.com
+   PORT=3003
+   LOG_LEVEL=INFO
+   LOG_FILE=/var/log/pointer-api.log
+   AUTHORIZED_API_KEYS=key1,key2,key3
+   INTERNAL_IP_PREFIXES=10.,192.168.,172.16.,172.17.,127.
+   CACHE_MAX_SIZE=500
+   CACHE_TTL_MS=300000
+   ```
 
-Users with valid API keys enjoy elevated privileges:
-- **Unlimited batch sizes**: Authorized users can submit requests with any number of addresses (non-authorized users are limited to 25 addresses per request)
-- **Enhanced health metrics**: Authorized users receive detailed information in the `/health` endpoint, including memory usage, cache hit rates, and version information
+## Configuration
 
-Requests from internal network IPs are automatically authorized without requiring an API key.
+### Environment Variables
 
-### Using API Keys (Client Documentation)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SEIREST` | Sei REST API endpoint | https://rest.sei-apis.com |
+| `PORT` | Server port | 3003 |
+| `LOG_LEVEL` | Log verbosity (DEBUG, INFO, WARN, ERROR) | INFO |
+| `LOG_FILE` | Log file path | /var/log/pointer-api.log |
+| `AUTHORIZED_API_KEYS` | Comma-separated API keys | none |
+| `INTERNAL_IP_PREFIXES` | Comma-separated internal IP prefixes | 10.,192.168.,172.16.,172.17.,127. |
+| `CACHE_MAX_SIZE` | Maximum cache entries | 500 |
+| `CACHE_TTL_MS` | Cache time-to-live in milliseconds | 300000 |
 
-To authenticate your requests:
+### API Keys
 
+Generate secure API keys:
 ```bash
-# Include the X-API-Key header in your requests
-curl -X POST https://pointer.basementnodes.ca/ \
--H "Content-Type: application/json" \
--H "X-API-Key: your-api-key-here" \
--d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-For programmatic clients:
+API keys provide:
+- Unlimited batch size (default limit: 25 addresses)
+- Detailed health endpoint metrics
 
-```javascript
-// JavaScript example
-fetch('https://pointer.basementnodes.ca/', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': 'your-api-key-here'
-  },
-  body: JSON.stringify({
-    addresses: ['0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae']
-  })
-})
-```
-
-```python
-# Python example
-import requests
-headers = {
-    'Content-Type': 'application/json',
-    'X-API-Key': 'your-api-key-here'
-}
-data = {
-    'addresses': ['0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae']
-}
-response = requests.post('https://pointer.basementnodes.ca/', headers=headers, json=data)
-```
-
-### Security Recommendations
-
-When implementing API keys:
-
-- Store keys securely and never commit them to version control
-- Rotate keys periodically (e.g., every 90 days)
-- Revoke keys that may have been compromised
-- Use a different key for each client or service
-- Log and monitor API key usage for suspicious patterns
+Internal network requests don't require API keys.
 
 ## Running the API
 
 ```bash
-# Normal mode
+# Production
 node server.js
 
-# Development mode with debug logging
-yarn dev  # or: LOG_LEVEL=DEBUG node server.js
+# Development
+npm run dev
 ```
 
 ## Terminology
 
-- **Base Asset**: The original asset/token on its native chain or protocol
-- **Pointer**: A token that represents another asset (the pointee) on a different layer or protocol
-- **Pointee**: The base asset that has a corresponding pointer token
+- **Base Asset**: Original token on its native protocol
+- **Pointer**: Token representing another asset on a different protocol
+- **Pointee**: The asset a pointer represents
 
-## Asset Types
+## Valid Address Formats
 
-The API handles three distinct asset types:
-
-1. **EVM Assets**: Ethereum-style addresses starting with "0x"
-   - Can be base assets with CW pointers
-   - Can be pointers to CW or NATIVE assets
-
-2. **CW Assets**: CosmWasm addresses starting with "sei1"
-   - Can be base assets with EVM pointers
-   - Can be pointers to EVM assets
-
-3. **NATIVE Assets**: Native Sei denoms starting with "ibc/" or "factory/"
-   - Always base assets
-   - Can have EVM pointers
+| Type | Format | Example |
+|------|--------|---------|
+| EVM | `0x` + 40 hex characters | `0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1` |
+| CosmWasm | `sei1` + alphanumeric | `sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl` |
+| IBC | `ibc/` + uppercase hex hash | `ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0` |
+| TokenFactory | `factory/{creator}/{subdenom}` | `factory/sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc/isei` |
 
 ## API Endpoints
 
-### GET `/:address`
+### GET /:address
 
-Checks a single address and returns its properties. Handles URL encoding for addresses with special characters.
+Returns pointer information for a single address.
 
-**Example requests:**
-
+**Request:**
 ```bash
-# Simple address
-curl -X GET https://pointer.basementnodes.ca/0x809FF4801aA5bDb33045d1fEC810D082490D63a4
-
-# IBC address 
-curl -X GET https://pointer.basementnodes.ca/ibc%2FCA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0
-
-# Factory address
-curl -X GET https://pointer.basementnodes.ca/factory%2Fsei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc%2Fisei
+curl https://pointer.basementnodes.ca/0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1
 ```
 
-**Note:** The GET endpoint can be accessed directly via a web browser. Enter a valid URL in the browser's address bar, the API will handle URL-encoded characters and return the expected JSON response.
-
 **Response:**
-
 ```json
 {
-  "address": "0x809FF4801aA5bDb33045d1fEC810D082490D63a4",
-  "isBaseAsset": true,
-  "isPointer": false,
-  "pointerType": "ERC20",
-  "pointerAddress": "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl",
-  "pointeeAddress": ""
+  "address": "0x3894085Ef7Ff0f0aeDf52E2A2704928d1Ec074F1",
+  "isBaseAsset": false,
+  "isPointer": true,
+  "pointerType": "NATIVE",
+  "pointerAddress": "",
+  "pointeeAddress": "ibc/CA6FBFAF399474A06263E10D0CE5AEBBE15189D6D4B2DD9ADE61007E68EB9DB0"
 }
 ```
 
-### POST `/`
+**URL Encoding:**
+- IBC: `/ibc/HASH` or `/ibc%2FHASH`
+- Factory: `/factory/creator/subdenom` or `/factory%2Fcreator%2Fsubdenom`
 
-Checks either a single address or multiple addresses in a single request. The request body should contain either an `address` field for a single address or an `addresses` array for multiple addresses.
+### POST /
 
-**Examples:**
+Processes single or multiple addresses.
 
+**Single Address Request:**
 ```bash
-# Single address
 curl -X POST https://pointer.basementnodes.ca/ \
--H "Content-Type: application/json" \
--d '{"address": "0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae"}'
-
-# Multiple addresses
-curl -X POST https://pointer.basementnodes.ca/ \
--H "Content-Type: application/json" \
--d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
-
-# With API key for unlimited batch size
-curl -X POST https://pointer.basementnodes.ca/ \
--H "Content-Type: application/json" \
--H "X-API-Key: your-api-key-here" \
--d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
+  -H "Content-Type: application/json" \
+  -d '{"address": "0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae"}'
 ```
 
-For a single address, this endpoint returns a single object. For multiple addresses, it returns an array of objects.
-
-### GET `/health`
-
-Returns the current status and health metrics of the API.
-
-**Example:**
-
+**Batch Request:**
 ```bash
-curl -X GET https://pointer.basementnodes.ca/health
+curl -X POST https://pointer.basementnodes.ca/ \
+  -H "Content-Type: application/json" \
+  -d '{"addresses": ["0xd78BE621436e69C81E4d0e9f29bE14C5EC51E6Ae", "sei1msjly0e2v5u99z53vqre47ltv0fsfa6h9fzrljuvp0e5zg76x7fswxcxjl"]}'
 ```
 
-**Response for unauthorized users:**
+**With API Key:**
+```bash
+curl -X POST https://pointer.basementnodes.ca/ \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key-here" \
+  -d '{"addresses": ["address1", "address2"]}'
+```
 
+Returns single object for single address, array for multiple addresses.
+
+### GET /health
+
+Returns API health status.
+
+**Request:**
+```bash
+curl https://pointer.basementnodes.ca/health
+```
+
+**Basic Response:**
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-04-27T15:23:45.678Z",
+  "timestamp": "2025-07-10T15:23:45.678Z",
   "uptime": 86400.123,
   "cacheStats": {
     "size": 123,
@@ -262,158 +189,96 @@ curl -X GET https://pointer.basementnodes.ca/health
 }
 ```
 
-**Additional response data for authorized users:**
+Authorized users receive additional metrics: memory usage, cache hit rates, and version information.
 
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried address |
+| `isBaseAsset` | boolean | True if address is a base asset |
+| `isPointer` | boolean | True if address is a pointer |
+| `pointerType` | string | Type of pointer (ERC20, ERC721, ERC1155, CW20, CW721, CW1155, NATIVE) |
+| `pointerAddress` | string | Associated pointer address (empty if isPointer is true) |
+| `pointeeAddress` | string | Associated pointee address (empty if isBaseAsset is true) |
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Success |
+| 304 | Not Modified (ETag match) |
+| 400 | Invalid address format |
+| 403 | Invalid or missing API key |
+| 404 | Endpoint not found |
+| 429 | Rate limit exceeded |
+| 500 | Server error |
+
+**Error Format:**
 ```json
 {
-  "version": "1.6.0",
-  "nodeVersion": "v18.16.0",
-  "environment": "production",
-  "logLevel": "INFO",
-  "memoryUsage": {
-    "rss": 56123456,
-    "heapTotal": 34123456,
-    "heapUsed": 27654321,
-    "external": 1234567
-  },
-  "authorization": {
-    "method": "api_key"  // or "internal_network"
-  },
-  "cacheStats": {
-    "hits": 12345,
-    "misses": 2345,
-    "hitRate": 0.84
-  }
+  "error": "Invalid address format",
+  "details": "Valid formats: EVM hex (0x + 40 hex chars), Bech32 CosmWasm (sei1...), IBC denom (ibc/HASH), TokenFactory (factory/creator/subdenom)"
 }
-```
-
-## Error Handling
-
-The API returns standard HTTP status codes:
-
-- `200 OK`: Request successful
-- `304 Not Modified`: ETag matches, content unchanged
-- `400 Bad Request`: Invalid input format or address
-- `403 Forbidden`: API key invalid/missing
-- `429 Too Many Requests`: Rate limit exceeded
-- `500 Internal Server Error`: Server-side issue
-
-Error responses include a descriptive message and often additional details to help diagnose the issue.
-
-## Logging
-
-The API includes a structured logging system with configurable levels:
-
-- `DEBUG`: Provides full request/response details, including bodies
-- `INFO`: Basic operational details without sensitive data
-- `WARN`: Warnings and potential issues
-- `ERROR`: Error conditions with stack traces
-
-All logs are in JSON format and can be written to a file specified by the `LOG_FILE` environment variable.
-
-## Caching
-
-The API implements two levels of caching:
-
-1. **In-memory LRU cache**: Stores recent query results to avoid redundant processing
-   - Cache size and TTL are configurable via environment variables
-   - Helps reduce load on the Sei REST API
-
-2. **HTTP caching with ETags**: Allows clients to skip re-fetching unchanged data
-   - Responses include ETag headers based on content hash
-   - Clients can use If-None-Match headers for conditional requests
-
-## Testing
-
-Run API tests:
-
-```bash
-yarn test
 ```
 
 ## Deployment
 
 ### Systemd Service
 
+Create `/etc/systemd/system/pointer-api.service`:
+
 ```ini
 [Unit]
-Description=Sei Asset Pointer Metadata API
+Description=Sei Pointer API
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=/path/to/pointer-api
 ExecStart=/usr/bin/node /path/to/pointer-api/server.js
-Restart=on-failure
-User=root
-Environment=PORT=3003
-Environment=SEIREST=https://rest.sei-apis.com
-Environment=LOG_LEVEL=INFO
-Environment=LOG_FILE=/var/log/pointer-api.log
-Environment=AUTHORIZED_API_KEYS=key1,key2,key3
-Environment=CACHE_MAX_SIZE=500
-Environment=CACHE_TTL_MS=300000
-Environment=API_KEY_HEADER=X-API-Key
+Restart=always
+User=nodejs
+Environment=NODE_ENV=production
+EnvironmentFile=/path/to/pointer-api/.env
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-### Caddy Configuration
+Enable and start:
+```bash
+systemctl enable pointer-api
+systemctl start pointer-api
+```
+
+### Reverse Proxy
+
+The API works with any reverse proxy. Example Caddy configuration:
 
 ```caddyfile
-pointer.basementnodes.ca {
-    # 1. Static files first
-    @robots path /robots.txt
-    handle @robots {
-        file_server
-    }
-    @favicon path /favicon.ico
-    handle @favicon {
-        file_server
-    }
-    
-    # 2. Catch literal "/", return 404
-    @root path /
-    handle @root {
-        respond "Invalid endpoint" 404
-    }
-    
-    # 3. URL-encoding rewrites
-    @ibcInvalidURL path_regexp ibcPath ^/ibc/([^/]+)$
-    rewrite @ibcInvalidURL /ibc%2F{re.ibcPath.1}
-    
-    @factoryInvalidURL path_regexp factoryPath ^/factory/([^/]+)/([^/]+)$
-    rewrite @factoryInvalidURL /factory%2F{re.factoryPath.1}%2F{re.factoryPath.2}
-    
-    # 4. Everything else → your API
-    reverse_proxy 10.70.48.203:3003 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-    }
-    
+pointer.example.com {
+    reverse_proxy localhost:3003
     encode gzip
-    
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "no-referrer-when-downgrade"
-        Permissions-Policy "geolocation=(), camera=(), microphone=(), interest-cohort=()"
-    }
-    
-    log {
-        output file /var/log/pointer-basementnodes.log
-        format json
-        level info
-    }
 }
 ```
 
-## Troubleshooting
+## Logging
 
-For persistent issues, please open an issue at: <https://github.com/cordt-sei/pointer-api/issues>
+The API outputs structured JSON logs. Each log entry includes:
+- timestamp
+- level (DEBUG, INFO, WARN, ERROR)
+- message
+- data (contextual information)
+
+Use `jq` to parse logs:
+```bash
+tail -f /var/log/pointer-api.log | jq
+```
+
+## Support
+
+Report issues: https://github.com/cordt-sei/pointer-api/issues
 
 ## License
 
