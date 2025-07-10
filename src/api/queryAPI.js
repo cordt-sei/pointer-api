@@ -5,8 +5,8 @@ import { log } from '../utils/logger.js';
 dotenv.config();
 
 const SEIREST = process.env.SEIREST;
-const USERNAME = process.env.API_USERNAME;
-const PASSWORD = process.env.API_PASSWORD;
+const USERNAME = process.env.USERNAME;
+const PASSWORD = process.env.PASSWORD;
 
 /**
  * Query the Sei REST API with proper error handling
